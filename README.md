@@ -113,13 +113,9 @@ Allow your worker to join the cluster:
 $ kubectl apply -f config_map_aws_auth.yaml
 ```
 
-Now that the API server allows connections from the kubelet and kiyot, you might need to ssh into the worker node and restart these services (the IP address is from the output of `terraform apply`, check `worker-ips`):
+Now the API server allows connections from the kubelet and kiyot. If you  ssh into the worker node, you can check out that all required services (milpa, kiyot and kubelet) are up and running (the IP address is in the output of `terraform apply`, check `worker-ips`).
 
-```
-ssh ec2-user@3.94.163.95 "sudo systemctl restart kiyot; sudo systemctl restart kubelet"
-```
-
-Delete the `aws-node` daemonset. This starts a CNI plugin on workers, which is unnecessary with Milpa and Kiyot.
+Next, delete the `aws-node` daemonset. This starts a CNI plugin on workers, which is unnecessary with Milpa and Kiyot.
 
 ```
 $ kubectl -n kube-system get ds
