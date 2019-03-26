@@ -1,3 +1,6 @@
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
+kubeconfig
+config_map_aws_auth.yaml
+env.tfvars
