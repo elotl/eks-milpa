@@ -166,15 +166,3 @@ resource "aws_autoscaling_group" "demo" {
     propagate_at_launch = true
   }
 }
-
-#data "aws_security_groups" "milpa-SGs" {
-#  depends_on = [ "aws_vpc.demo" ]
-#  filter {
-#    name   = "group-name"
-#    values = ["${var.cluster-name}-*"]
-#  }
-#  filter {
-#    name   = "vpc-id"
-#    values = ["${aws_vpc.demo.id}"]
-#  }
-#}
