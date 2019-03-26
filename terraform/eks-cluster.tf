@@ -6,7 +6,7 @@
 #
 
 resource "aws_iam_role" "demo-cluster" {
-  name = "terraform-eks-demo-cluster"
+  name_prefix = "${var.cluster-name}-cluster-role"
 
   assume_role_policy = <<POLICY
 {
@@ -25,7 +25,7 @@ POLICY
 }
 
 resource "aws_iam_role_policy" "eks-policy" {
-  name = "eks-policy"
+  name_prefix = "${var.cluster-name}-eks-policy"
   role = "${aws_iam_role.demo-cluster.id}"
 
   policy = <<EOF

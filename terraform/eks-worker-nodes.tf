@@ -8,7 +8,7 @@
 #
 
 resource "aws_iam_role" "demo-node" {
-  name = "terraform-eks-demo-node"
+  name_prefix = "${var.cluster-name}-node-role"
 
   assume_role_policy = <<POLICY
 {
@@ -42,7 +42,7 @@ resource "aws_iam_role_policy_attachment" "demo-node-AmazonEC2ContainerRegistryR
 }
 
 resource "aws_iam_instance_profile" "demo-node" {
-  name = "terraform-eks-demo"
+  name = "${var.cluster-name}-eks-profile"
   role = "${aws_iam_role.demo-node.name}"
 }
 
@@ -136,7 +136,7 @@ resource "aws_launch_configuration" "demo" {
   iam_instance_profile        = "${aws_iam_instance_profile.demo-node.name}"
   image_id                    = "${data.aws_ami.eks-worker.id}"
   instance_type               = "m4.large"
-  name_prefix                 = "terraform-eks-demo"
+  name_prefix                 = "${var.cluster-name}-eks-launch-configuration"
   security_groups             = ["${aws_security_group.demo-node.id}"]
   user_data_base64            = "${base64encode(local.demo-node-userdata)}"
   key_name = "${var.ssh-key-name}"
@@ -151,7 +151,7 @@ resource "aws_autoscaling_group" "demo" {
   launch_configuration = "${aws_launch_configuration.demo.id}"
   max_size             = 1
   min_size             = 1
-  name                 = "terraform-eks-demo"
+  name                 = "${var.cluster-name}-eks-group"
   vpc_zone_identifier  = ["${aws_subnet.demo.*.id}"]
 
   tag {
