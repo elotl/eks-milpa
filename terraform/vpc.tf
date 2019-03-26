@@ -15,6 +15,14 @@ resource "aws_vpc" "demo" {
       "kubernetes.io/cluster/${var.cluster-name}", "shared",
     )
   }"
+
+  provisioner "local-exec" {
+    # Remove any leftover instance, security group etc Milpa created. They
+    # would prevent terraform from destroying the VPC.
+    when    = "destroy"
+    command = "./cleanup-vpc.sh ${self.id} > /dev/null 2>&1"
+    interpreter = ["/bin/bash", "-c"]
+  }
 }
 
 resource "aws_subnet" "demo" {
@@ -37,6 +45,14 @@ resource "aws_internet_gateway" "demo" {
 
   tags = {
     Name = "terraform-eks-demo"
+  }
+
+  provisioner "local-exec" {
+    # Remove any leftover instance, security group etc Milpa created. They
+    # would prevent terraform from destroying the VPC.
+    when    = "destroy"
+    command = "./cleanup-vpc.sh ${self.vpc_id} > /dev/null 2>&1"
+    interpreter = ["/bin/bash", "-c"]
   }
 }
 
