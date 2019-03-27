@@ -1,67 +1,79 @@
 #!/bin/bash
+#
+# Remove leftover cloud resources from an AWS VPC.
+#
+
+function usage() {
+    {
+        echo "Usage $0 <vpc-id> <milpa-cluster-name>"
+        echo "You can also set the environment variables VPC_ID and CLUSTER_NAME."
+    } >&2
+    exit 1
+}
+
+function check_prg() {
+    $1 --version || {
+        {
+            echo "Can't find $prg."
+        } >&2
+        exit 2
+    }
+}
 
 if [[ "$1" != "" ]]; then
     VPC_ID="$1"
 fi
+if [[ -z "$VPC_ID" ]]; then
+    usage
+fi
+shift
 
-if [[ "$VPC_ID" = "" ]]; then
-    echo "Please provide VPC_ID."
-    exit 1
+if [[ "$1" != "" ]]; then
+    CLUSTER_NAME="$1"
+fi
+if [[ -z "$CLUSTER_NAME" ]]; then
+    usage
+fi
+shift
+
+if [[ -n "$1" ]]; then
+    usage
 fi
 
-aws --version || {
-    echo "Missing command line tool: aws"
-    exit 1
-}
+check_prg aws
+check_prg jq
 
-jq --version || {
-    echo "Missing command line tool: jq"
-    exit 1
-}
-
-if [[ -n "$TF_AWS_ACCESS_KEY_ID" ]]; then
-    export AWS_ACCESS_KEY_ID="$TF_AWS_ACCESS_KEY_ID"
-fi
-
-if [[ -n "$TF_AWS_SECRET_ACCESS_KEY" ]]; then
-    export AWS_SECRET_ACCESS_KEY="$TF_AWS_SECRET_ACCESS_KEY"
-fi
-
-# Delete instances in VPC.
+# Delete instances in VPC. Do this in a loop, since Milpa might be still
+# creating new instances.
 while true; do
-    instances=$(aws ec2 describe-instances | jq -r ".Reservations | .[] | .Instances | .[] | select(.State.Name!=\"terminated\") | select(.VpcId==\"$VPC_ID\") | .InstanceId")
-    if [[ "$instances" != "" ]]; then
-        echo "Terminating instances \"$instances\""
-        aws ec2 terminate-instances --instance-ids $instances
+    instances=$(aws ec2 describe-instances | jq -r ".Reservations | .[] | .Instances | .[] | select(.State.Name!=\"shutting-down\") | select(.State.Name!=\"terminated\") | select(.VpcId==\"$VPC_ID\") | select(.Tags) | select(.Tags[] | contains({\"Key\":\"MilpaClusterName\",\"Value\":\"$CLUSTER_NAME\"})) | .InstanceId")
+    if [[ -n "$instances" ]]; then
+        echo "Terminating instances:"
+        echo "$instances"
+        aws ec2 terminate-instances --instance-ids $instances > /dev/null 2>&1
     else
         break
     fi
 done
 
 # Delete LBs.
-while true; do
-    lbs=$(aws elb describe-load-balancers | jq -r ".LoadBalancerDescriptions | .[] | select(.VPCId==\"$VPC_ID\") | .LoadBalancerName")
-    if [[ "$lbs" != "" ]]; then
-        echo "Deleting LBs \"$lbs\""
-        for lb in $lbs; do
-            aws elb delete-load-balancer --load-balancer-name $lb
-        done
-    else
-        break
-    fi
-done
+lbs=$(aws elb describe-load-balancers | jq -r ".LoadBalancerDescriptions | .[] | select(.VPCId==\"$VPC_ID\") | .LoadBalancerName")
+if [[ -n "$lbs" ]]; then
+    echo "Removing LBs:"
+    echo "$lbs"
+    for lb in $lbs; do
+        aws elb delete-load-balancer --load-balancer-name $lb > /dev/null 2>&1
+    done
+fi
 
 # Delete security groups in VPC.
-for sg in $(aws ec2 describe-security-groups | jq -r ".SecurityGroups | .[] | select(.VpcId == \"$VPC_ID\") | .GroupId"); do
-    aws ec2 delete-security-group --group-id $sg
-done
-
-# Delete route tables in VPC.
-for rt in $(aws ec2 describe-route-tables | jq -r ".RouteTables | .[] | select(.VpcId == \"$VPC_ID\") | .RouteTableId"); do
-    for cidr in $(aws ec2 describe-route-tables | jq -r ".RouteTables | .[] | select(.RouteTableId == \"$rt\") | .Routes | .[] | .DestinationCidrBlock"); do
-        aws ec2 delete-route --route-table-id $rt --destination-cidr $cidr
+sgs=$(aws ec2 describe-security-groups | jq -r ".SecurityGroups | .[] | select(.VpcId == \"$VPC_ID\") | .GroupId")
+if [[ -n "$sgs" ]]; then
+    echo "Removing SGs:"
+    echo "$sgs"
+    for sg in $sgs; do
+        aws ec2 delete-security-group --group-id $sg > /dev/null 2>&1
     done
-    aws ec2 delete-route-table --route-table-id $rt
-done
+fi
 
 exit 0
