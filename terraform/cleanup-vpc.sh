@@ -9,6 +9,16 @@ if [[ "$VPC_ID" = "" ]]; then
     exit 1
 fi
 
+aws --version || {
+    echo "Missing command line tool: aws"
+    exit 1
+}
+
+jq --version || {
+    echo "Missing command line tool: jq"
+    exit 1
+}
+
 # Delete instances in VPC.
 while true; do
     instances=$(aws ec2 describe-instances | jq -r ".Reservations | .[] | .Instances | .[] | select(.State.Name!=\"terminated\") | select(.VpcId==\"$VPC_ID\") | .InstanceId")
