@@ -57,6 +57,10 @@ resource "aws_internet_gateway" "demo" {
     when    = "destroy"
     command = "./cleanup-vpc.sh ${self.vpc_id} > /dev/null 2>&1"
     interpreter = ["/bin/bash", "-c"]
+    environment = {
+      TF_AWS_ACCESS_KEY_ID = "${var.aws-access-key-id}"
+      TF_AWS_SECRET_ACCESS_KEY = "${var.aws-secret-access-key}"
+    }
   }
 }
 
