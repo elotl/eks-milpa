@@ -19,6 +19,14 @@ jq --version || {
     exit 1
 }
 
+if [[ -n "$TF_AWS_ACCESS_KEY_ID" ]]; then
+    export AWS_ACCESS_KEY_ID="$TF_AWS_ACCESS_KEY_ID"
+fi
+
+if [[ -n "$TF_AWS_SECRET_ACCESS_KEY" ]]; then
+    export AWS_SECRET_ACCESS_KEY="$TF_AWS_SECRET_ACCESS_KEY"
+fi
+
 # Delete instances in VPC.
 while true; do
     instances=$(aws ec2 describe-instances | jq -r ".Reservations | .[] | .Instances | .[] | select(.State.Name!=\"terminated\") | select(.VpcId==\"$VPC_ID\") | .InstanceId")
