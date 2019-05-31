@@ -22,11 +22,6 @@ resource "aws_vpc" "demo" {
     when    = "destroy"
     command = "./cleanup-vpc.sh ${self.id} ${var.cluster-name}"
     interpreter = ["/bin/bash", "-c"]
-    # Use the same AWS creds Milpa uses.
-    environment = {
-      AWS_ACCESS_KEY_ID = "${var.aws-access-key-id}"
-      AWS_SECRET_ACCESS_KEY = "${var.aws-secret-access-key}"
-    }
   }
 }
 
@@ -58,11 +53,6 @@ resource "aws_internet_gateway" "demo" {
     when    = "destroy"
     command = "./cleanup-vpc.sh ${self.vpc_id} ${var.cluster-name}"
     interpreter = ["/bin/bash", "-c"]
-    # Use the same AWS creds Milpa uses.
-    environment = {
-      AWS_ACCESS_KEY_ID = "${var.aws-access-key-id}"
-      AWS_SECRET_ACCESS_KEY = "${var.aws-secret-access-key}"
-    }
   }
 }
 
