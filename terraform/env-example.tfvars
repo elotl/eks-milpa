@@ -1,6 +1,7 @@
 # The name of the EKS cluster.
 cluster-name = "eks-milpa-test"
-# The access keys Milpa will use to create instances on AWS.
+# The access keys Milpa will use to create instances on AWS. Leave it empty to
+# have Milpa use the IAM role provisioned.
 aws-access-key-id = ""
 aws-secret-access-key = ""
 # The name of an already existing SSH key on EC2. This will be added to the
