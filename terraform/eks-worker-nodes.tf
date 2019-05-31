@@ -201,12 +201,13 @@ locals {
   demo-node-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
+yum -y install jq python-pip
 mkdir -p /etc/cni/net.d
 mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.demo.certificate_authority.0.data}" > /etc/kubernetes/pki/ca.crt
 curl -L -O https://download.elotl.co/milpa-installer-latest && chmod 755 milpa-installer-latest
 ./milpa-installer-latest
-pip install --user yq
-/root/.local/bin/yq -y ".clusterName=\"${var.cluster-name}\" | .cloud.aws.accessKeyID=\"${var.aws-access-key-id}\" | .cloud.aws.secretAccessKey=\"${var.aws-secret-access-key}\" | .cloud.aws.vpcID=\"\" | .license.key=\"${var.license-key}\" | .license.id=\"${var.license-id}\" | .license.username=\"${var.license-username}\" | .license.password=\"${var.license-password}\"" /opt/milpa/etc/server.yml > /opt/milpa/etc/server.yml.new && mv /opt/milpa/etc/server.yml.new /opt/milpa/etc/server.yml
+pip install yq
+yq -y ".clusterName=\"${var.cluster-name}\" | .cloud.aws.accessKeyID=\"${var.aws-access-key-id}\" | .cloud.aws.secretAccessKey=\"${var.aws-secret-access-key}\" | .cloud.aws.vpcID=\"\" | .license.key=\"${var.license-key}\" | .license.id=\"${var.license-id}\" | .license.username=\"${var.license-username}\" | .license.password=\"${var.license-password}\"" /opt/milpa/etc/server.yml > /opt/milpa/etc/server.yml.new && mv /opt/milpa/etc/server.yml.new /opt/milpa/etc/server.yml
 sed -i 's#--milpa-endpoint 127.0.0.1:54555$#--milpa-endpoint 127.0.0.1:54555 --non-masquerade-cidr 172.20.0.0/16#' /etc/systemd/system/kiyot.service
 sed -i 's#--config /opt/milpa/etc/server.yml$#--config /opt/milpa/etc/server.yml --delete-cluster-lock-file#' /etc/systemd/system/milpa.service
 mkdir -p /etc/systemd/system/kubelet.service.d/
