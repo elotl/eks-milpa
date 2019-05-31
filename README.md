@@ -48,151 +48,37 @@ Type `yes`, and terraform will start creating your EKS infrastructure. This will
 ```
 Outputs:
 
-config_map_aws_auth =
-
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: aws-auth
-  namespace: kube-system
-data:
-  mapRoles: |
-    - rolearn: arn:aws:iam::689494258501:role/terraform-eks-demo-node
-      username: system:node:{{EC2PrivateDNSName}}
-      groups:
-        - system:bootstrappers
-        - system:nodes
-
-kubeconfig =
-
-apiVersion: v1
-clusters:
-- cluster:
-    server: https://151728AA66F2D872AB6D4612FCFB10BE.yl4.us-east-1.eks.amazonaws.com
-    certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN5RENDQWJDZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRFNU1ETXhOVEl4TlRFeE1Gb1hEVEk1TURNeE1qSXhOVEV4TUZvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBS2R5ClNPbm4ra0FnREd1cU81RjhyRFpXMWJqcHFManRlMjNNK3NXays5TjhsVDY3M3BmWkdxWkE4VURaUU5UT2pOWjQKQ09Mdm1GL3ZDamZwWnIyenpseU90K2E0MzZVdlBhcEtSOTFLLzhPY3BzYUluWTNMVTBVNmhQWTdNNENXcFdWSwpvS3Mvby8wQ3dhS0FUN3lTUWVGK0FwTjhybE9NcWJzV1RpbnFtV1R3NEFKOUpaY2ZhWElyaE9kMk1qTzBCcXJjCndVTXBUbU9DMHRqY013a1VHaWl2VkZkNUtKSUVhaW9xa05OT0ZYbHlIVS8xQitQUXY3Y1hpV0Z1YW9nSUZ4Q0cKZzBPaEFjSmdjaTJKODdmQUJhMENqYXlobzdyUUtBWkg1V1p4Z2ZSc0tBTEo3MitTOWtSbjJQSlpkZWtjSTZPdApzNTdsNFVidlBKbm1vbEUwbXlVQ0F3RUFBYU1qTUNFd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFKNkJCSGJYb1pjT3RNK3ZvWVRaWFJRSkNOZUMKV05xZjJNbHBvVEtFdi9ScjdJK1lxaWM0dlpucnZyQTNSZ21wdk1xV0M1V3MrOEZobGU3RHk5cFR3RE8zVWtlcQovS3p4ZTR1Ujl1QXpQc0tUaEhSTVVsdEd0a3FtSG5zYW5yRnFRSklEQnF3OG83YVZsZk15SkhndHRkenozSEF0Ck5oRjNTZUZpVzVlVmhDa0RzV3NQejFQbXZ0UkdUcEd4YzVBWnFHWHYzYjFNUjloWXd6aUE4anBSbGJaanVXRjcKWTR0eDNEaXVFTk5PYVplVGEvYmhaYy90Y2JnKzhNc2FUWTh4WGpUbklTaWp6MDJScHk2bDlmNWgyeC9aQU1wcwppTTNVVTJwTnBzUkpsTzV0anovT2NubGFYUE1ibEJJS3I5a3BDd0loNjg5VWdKcXRHSmRiSjI0OUNsZz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
-  name: kubernetes
-contexts:
-- context:
-    cluster: kubernetes
-    user: aws
-  name: aws
-current-context: aws
-kind: Config
-preferences: {}
-users:
-- name: aws
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1alpha1
-      command: aws-iam-authenticator
-      args:
-        - "token"
-        - "-i"
-        - "vilmos-eks-test"
-
 worker-ips = [
     3.94.163.95
 ]
 ```
 
+This is the IP address of the worker node in the cluster.
+
 ## Configure your Cluster
 
-Save the items from the `terraform apply` run output:
-* `config_map_aws_auth` as `config_map_aws_auth.yaml`.
-* `kubeconfig` as `~/.kube/config`. You might already have existing Kubernetes clusters configured in this configuration file, in which case you should add it to the existing list.
-
-Now allow Kiyot to connect to the API server as the anonymous user:
+A kubeconfig named `kubeconfig` is automatically created in the current working directory. To use it, either copy it to `~/.kube/config`, or set the `KUBECONFIG` environment variable:
 
 ```
-$ kubectl create clusterrolebinding cluster-system-anonymous --clusterrole=cluster-admin --user=system:anonymous
-```
-
-Allow your worker to join the cluster:
-
-```
-$ kubectl apply -f config_map_aws_auth.yaml
-```
-
-Now the API server allows connections from the kubelet and kiyot. If you  ssh into the worker node, you can check out that all required services (milpa, kiyot and kubelet) are up and running (the IP address is in the output of `terraform apply`, check `worker-ips`).
-
-Next, delete the `aws-node` daemonset. This starts a CNI plugin on workers, which is unnecessary with Milpa and Kiyot.
-
-```
-$ kubectl -n kube-system get ds
-NAME         DESIRED   CURRENT   READY     UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
-aws-node     0         0         0         0            0           <none>          1m
-kube-proxy   0         0         0         0            0           <none>          1m
-$ kubectl -n kube-system delete daemonset aws-node
-daemonset.extensions "aws-node" deleted
-```
-
-Update the configuration for kube-proxy:
-
-```
-$ kubectl -n kube-system edit daemonset -oyaml kube-proxy
-```
-
-Update `command` for the kube-proxy container in `/tmp/kube-proxy-ds.yaml` to include `--masquerade-all`. It should look something like this (make sure that you only add `--masquerade-all`, and leave the other configuration options in place):
-
-```
-[...]
-      containers:
-      - command:
-        - /bin/sh
-        - -c
-        - kube-proxy --masquerade-all --resource-container="" --oom-score-adj=-998 --master=...
-        image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.10.3
-        imagePullPolicy: IfNotPresent
-        name: kube-proxy
-[...]
-daemonset.extensions/kube-proxy edited
-```
-
-Once kube-proxy gets updated, the system pods should come up:
-
-```
-$ kubectl get pods --all-namespaces
-NAMESPACE     NAME                        READY     STATUS    RESTARTS   AGE
-kube-system   kube-dns-6f455bb957-t42mt   3/3       Running   0          27m
-kube-system   kube-proxy-db4rx            1/1       Running   0          4m
+$ export KUBECONFIG=$(pwd)/kubeconfig
 ```
 
 At this point your cluster is ready for deploying your applications. You can go through our [Kiyot tutorials](https://static.elotl.co/docs/latest/kiyot/kiyot.html#tutorials) to get started.
 
 ## Cleanup
 
-To remove all resources:
+To remove all Kubernetes resources:
 
 ```
-$ kubectl delete --all pods --namespace=default
-pod "frontend-5c548f4769-dnr5m" deleted
-pod "frontend-5c548f4769-hrpnj" deleted
-pod "frontend-5c548f4769-rfzr4" deleted
-pod "redis-master-55db5f7567-fbgsm" deleted
-pod "redis-slave-584c66c5b5-d4nzh" deleted
-pod "redis-slave-584c66c5b5-fnwhg" deleted
-$ kubectl delete --all deployments --namespace=default
-deployment.extensions "frontend" deleted
-deployment.extensions "redis-master" deleted
-deployment.extensions "redis-slave" deleted
-$ kubectl delete --all services --namespace=default
-service "frontend" deleted
-service "kubernetes" deleted
-$ kubectl delete --all pods --namespace=kube-system
-pod "kube-dns-6f455bb957-t42mt" deleted
-pod "kube-proxy-db4rx" deleted
-pod "kubernetes-dashboard-669f9bbd46-g4zhm" deleted
-$ kubectl delete --all deployments --namespace=kube-system
-deployment.extensions "kube-dns" deleted
-deployment.extensions "kubernetes-dashboard" deleted
-$ kubectl delete --all services --namespace=kube-system
-service "kube-dns" deleted
-service "kubernetes-dashboard" deleted
-$ kubectl delete --all daemonsets --namespace=kube-system
-daemonset.extensions "kube-proxy" deleted
+for ns in $(kubectl get namespaces | tail -n+2 | awk '{print $1}'); do
+    kubectl delete --all pods --namespace=$ns
+    kubectl delete --all deployments --namespace=$ns
+    kubectl delete --all services --namespace=$ns
+    kubectl delete --all daemonsets --namespace=$ns
+done
 ```
 
-Now you can remove all resources via terraform:
+Now you can remove the cluster via Terraform:
 
 ```
 $ terraform destroy -var-file env.tfvars
