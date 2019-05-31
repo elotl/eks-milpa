@@ -213,7 +213,7 @@ sed -i 's#--config /opt/milpa/etc/server.yml$#--config /opt/milpa/etc/server.yml
 mkdir -p /etc/systemd/system/kubelet.service.d/
 echo -e "[Service]\nStartLimitInterval=0\nStartLimitIntervalSec=0\nRestart=always\nRestartSec=5" > /etc/systemd/system/kubelet.service.d/override.conf
 systemctl daemon-reload
-systemctl restart milpa; sleep 30; systemctl restart kiyot
+systemctl restart milpa; systemctl restart kiyot
 /etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.demo.endpoint}' --b64-cluster-ca '${aws_eks_cluster.demo.certificate_authority.0.data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/opt/milpa/run/kiyot.sock --max-pods=1000' '${var.cluster-name}'
 USERDATA
 }
