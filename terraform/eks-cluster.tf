@@ -106,3 +106,76 @@ resource "aws_eks_cluster" "demo" {
     "aws_iam_role_policy_attachment.demo-cluster-AmazonEKSServicePolicy",
   ]
 }
+
+locals {
+  kubeconfig = <<KUBECONFIG
+apiVersion: v1
+clusters:
+- cluster:
+    server: ${aws_eks_cluster.demo.endpoint}
+    certificate-authority-data: ${aws_eks_cluster.demo.certificate_authority.0.data}
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: aws
+  name: aws
+current-context: aws
+kind: Config
+preferences: {}
+users:
+- name: aws
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1alpha1
+      command: aws-iam-authenticator
+      args:
+        - "token"
+        - "-i"
+        - "${var.cluster-name}"
+KUBECONFIG
+
+  kube_proxy_patch = <<KUBEPROXY
+{"spec":{"template":{"spec":{"$setElementOrder/containers":[{"name":"kube-proxy"}],"containers":[{"command":["/bin/sh","-c","kube-proxy --masquerade-all --resource-container=\"\" --oom-score-adj=-998 --master=${aws_eks_cluster.demo.endpoint} --kubeconfig=/var/lib/kube-proxy/kubeconfig --proxy-mode=iptables --v=2 1\u003e\u003e/var/log/kube-proxy.log 2\u003e\u00261"],"name":"kube-proxy"}]}}}}
+KUBEPROXY
+}
+
+resource "null_resource" "update-config" {
+  depends_on = ["aws_eks_cluster.demo"]
+
+  provisioner "local-exec" {
+    command = "echo \"${local.kubeconfig}\" > kubeconfig"
+  }
+
+  # Wait for the API endpoint to come up.
+  provisioner "local-exec" {
+    command = "timeout 300s sh -c 'while true; do kubectl get pods > /dev/null 2>&1 && break; sleep 1; done'"
+    environment = {
+      KUBECONFIG = "kubeconfig"
+    }
+  }
+
+  # Allow view access to cluster resources for kiyot.
+  provisioner "local-exec" {
+    command = "kubectl create clusterrolebinding cluster-system-anonymous --clusterrole=view --user=system:anonymous"
+    environment = {
+      KUBECONFIG = "kubeconfig"
+    }
+  }
+
+  # Remove aws-node.
+  provisioner "local-exec" {
+    command = "kubectl delete -n kube-system daemonset aws-node"
+    environment = {
+      KUBECONFIG = "kubeconfig"
+    }
+  }
+
+  # Edit kube-proxy flags.
+  provisioner "local-exec" {
+    command = "kubectl patch -n kube-system daemonset kube-proxy -p '${local.kube_proxy_patch}'"
+    environment = {
+      KUBECONFIG = "kubeconfig"
+    }
+  }
+}

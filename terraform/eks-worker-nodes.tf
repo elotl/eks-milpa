@@ -26,6 +26,37 @@ resource "aws_iam_role" "demo-node" {
 POLICY
 }
 
+locals {
+  config_map_aws_auth = <<CONFIGMAPAWSAUTH
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: aws-auth
+  namespace: kube-system
+data:
+  mapRoles: |
+    - rolearn: ${aws_iam_role.demo-node.arn}
+      username: system:node:{{EC2PrivateDNSName}}
+      groups:
+        - system:bootstrappers
+        - system:nodes
+CONFIGMAPAWSAUTH
+}
+
+resource "null_resource" "allow-join" {
+  depends_on = [
+    "aws_iam_role.demo-node",
+    "null_resource.update-config"
+  ]
+
+  provisioner "local-exec" {
+    command = "echo '${local.config_map_aws_auth}' | kubectl apply -f -"
+    environment = {
+      KUBECONFIG = "kubeconfig"
+    }
+  }
+}
+
 resource "aws_iam_role_policy_attachment" "demo-node-AmazonEKSWorkerNodePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
   role       = "${aws_iam_role.demo-node.name}"
