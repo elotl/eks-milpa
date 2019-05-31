@@ -129,7 +129,7 @@ daemonset.extensions "aws-node" deleted
 Update the configuration for kube-proxy:
 
 ```
-$ kubectl -n kube-system get daemonset -oyaml kube-proxy > /tmp/kube-proxy-ds.yaml
+$ kubectl -n kube-system edit daemonset -oyaml kube-proxy
 ```
 
 Update `command` for the kube-proxy container in `/tmp/kube-proxy-ds.yaml` to include `--masquerade-all`. It should look something like this (make sure that you only add `--masquerade-all`, and leave the other configuration options in place):
@@ -145,8 +145,7 @@ Update `command` for the kube-proxy container in `/tmp/kube-proxy-ds.yaml` to in
         imagePullPolicy: IfNotPresent
         name: kube-proxy
 [...]
-$ kubectl apply -f /tmp/kube-proxy-ds.yaml
-daemonset.extensions "kube-proxy" configured
+daemonset.extensions/kube-proxy edited
 ```
 
 Once kube-proxy gets updated, the system pods should come up:
