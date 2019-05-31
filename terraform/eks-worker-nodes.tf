@@ -215,6 +215,10 @@ echo -e "[Service]\nStartLimitInterval=0\nStartLimitIntervalSec=0\nRestart=alway
 systemctl daemon-reload
 systemctl restart milpa; systemctl restart kiyot
 /etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.demo.endpoint}' --b64-cluster-ca '${aws_eks_cluster.demo.certificate_authority.0.data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/opt/milpa/run/kiyot.sock --max-pods=1000' '${var.cluster-name}'
+sed -i '/docker/d' /etc/systemd/system/kubelet.service
+systemctl daemon-reload
+systemctl stop docker
+rm -f /var/run/docker.sock; touch /var/run/docker.sock
 USERDATA
 }
 
