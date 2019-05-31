@@ -65,7 +65,7 @@ if [[ -n "$lbs" ]]; then
         aws elb delete-load-balancer --load-balancer-name $lb > /dev/null 2>&1
     done
 fi
-v2lbs=$(aws elbv2 describe-load-balancers | jq -r ".LoadBalancers | .[] | select(.VpcId==\"vpc-0ada46aed080ffce4\") | .LoadBalancerArn")
+v2lbs=$(aws elbv2 describe-load-balancers | jq -r ".LoadBalancers | .[] | select(.VpcId==\"$VPC_ID\") | .LoadBalancerArn")
 if [[ -n "$v2lbs" ]]; then
     echo "Removing v2 LBs:"
     echo "$v2lbs"
