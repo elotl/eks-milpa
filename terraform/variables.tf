@@ -18,6 +18,16 @@ variable "aws-secret-access-key" {
   type = "string"
 }
 
+variable "default-instance-type" {
+  type = "string"
+  default = "t3.large"
+}
+
+variable "default-volume-size" {
+  type = "string"
+  default = "15Gi"
+}
+
 variable "license-key" {
   type = "string"
 }
