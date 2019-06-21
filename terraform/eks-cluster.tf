@@ -153,14 +153,6 @@ resource "null_resource" "update-config" {
     }
   }
 
-  # Remove aws-node.
-  provisioner "local-exec" {
-    command = "kubectl delete -n kube-system daemonset aws-node"
-    environment = {
-      KUBECONFIG = "kubeconfig"
-    }
-  }
-
   # Edit kube-proxy flags.
   provisioner "local-exec" {
     command = "kubectl patch -n kube-system daemonset kube-proxy -p '${local.kube_proxy_patch}'"
