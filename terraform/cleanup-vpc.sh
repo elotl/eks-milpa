@@ -5,8 +5,8 @@
 
 function usage() {
     {
-        echo "Usage $0 <vpc-id> <milpa-cluster-name>"
-        echo "You can also set the environment variables VPC_ID and CLUSTER_NAME."
+        echo "Usage $0 <vpc-id>"
+        echo "You can also set the environment variable VPC_ID."
     } >&2
     exit 1
 }
@@ -28,14 +28,6 @@ if [[ -z "$VPC_ID" ]]; then
 fi
 shift
 
-if [[ "$1" != "" ]]; then
-    CLUSTER_NAME="$1"
-fi
-if [[ -z "$CLUSTER_NAME" ]]; then
-    usage
-fi
-shift
-
 if [[ -n "$1" ]]; then
     usage
 fi
@@ -46,7 +38,7 @@ check_prg jq
 # Delete instances in VPC. Do this in a loop, since Milpa might be still
 # creating new instances.
 while true; do
-    instances=$(aws ec2 describe-instances | jq -r ".Reservations | .[] | .Instances | .[] | select(.State.Name!=\"shutting-down\") | select(.State.Name!=\"terminated\") | select(.VpcId==\"$VPC_ID\") | select(.Tags) | select(.Tags[] | contains({\"Key\":\"MilpaClusterName\",\"Value\":\"$CLUSTER_NAME\"})) | .InstanceId")
+    instances=$(aws ec2 describe-instances | jq -r ".Reservations | .[] | .Instances | .[] | select(.State.Name!=\"shutting-down\") | select(.State.Name!=\"terminated\") | select(.VpcId==\"$VPC_ID\") | .InstanceId")
     if [[ -n "$instances" ]]; then
         echo "Terminating instances:"
         echo "$instances"
