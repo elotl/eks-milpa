@@ -127,9 +127,9 @@ resource "aws_iam_instance_profile" "worker-node" {
 }
 
 resource "aws_security_group" "worker-node" {
-  name        = "terraform-eks-worker-node"
+  name        = "eks-worker-node-${var.cluster-name}"
   description = "Security group for all nodes in the cluster"
-  vpc_id      = "${aws_vpc.demo.id}"
+  vpc_id      = "${aws_vpc.vpc.id}"
 
   egress {
     from_port   = 0
@@ -142,14 +142,14 @@ resource "aws_security_group" "worker-node" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["${aws_vpc.demo.cidr_block}"]
+    cidr_blocks = ["${aws_vpc.vpc.cidr_block}"]
   }
 
   ingress {
     from_port                = 1025
     to_port                  = 65535
     protocol                 = "tcp"
-    security_groups = ["${aws_security_group.demo-cluster.id}"]
+    security_groups = ["${aws_security_group.clustersg.id}"]
   }
 
   ingress {
@@ -161,7 +161,7 @@ resource "aws_security_group" "worker-node" {
 
   tags = "${
     map(
-     "Name", "terraform-eks-worker-node",
+     "Name", "eks-worker-node-${var.cluster-name}",
      "kubernetes.io/cluster/${var.cluster-name}", "owned",
     )
   }"
@@ -170,7 +170,7 @@ resource "aws_security_group" "worker-node" {
 data "aws_ami" "eks-worker" {
   filter {
     name   = "name"
-    values = ["amazon-eks-node-${aws_eks_cluster.demo.version}-v*"]
+    values = ["amazon-eks-node-${aws_eks_cluster.cluster.version}-v*"]
   }
 
   most_recent = true
@@ -182,7 +182,7 @@ locals {
   worker-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.demo.endpoint}' --b64-cluster-ca '${aws_eks_cluster.demo.certificate_authority.0.data}' '${var.cluster-name}'
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority.0.data}' '${var.cluster-name}'
 USERDATA
 
   milpa-worker-userdata = <<USERDATA
@@ -250,8 +250,8 @@ EOF
 systemctl daemon-reload
 systemctl restart criproxy
 # Configure kubelet.
-mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.demo.certificate_authority.0.data}" > /etc/kubernetes/pki/ca.crt
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.demo.endpoint}' --b64-cluster-ca '${aws_eks_cluster.demo.certificate_authority.0.data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=kubernetes.io/role=milpa-worker' --use-max-pods false '${var.cluster-name}'
+mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.cluster.certificate_authority.0.data}" > /etc/kubernetes/pki/ca.crt
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority.0.data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=kubernetes.io/role=milpa-worker' --use-max-pods false '${var.cluster-name}'
 sed -i '/docker/d' /etc/systemd/system/kubelet.service
 # Override number of CPUs and memory cadvisor reports.
 infodir=/opt/kiyot/proc
@@ -326,11 +326,11 @@ resource "aws_autoscaling_group" "milpa-workers" {
   max_size             = 1
   min_size             = 1
   name                 = "${var.cluster-name}-milpa-workers"
-  vpc_zone_identifier  = "${aws_subnet.demo.*.id}"
+  vpc_zone_identifier  = "${aws_subnet.subnets.*.id}"
 
   tag {
     key                 = "Name"
-    value               = "terraform-milpa-eks-${var.cluster-name}"
+    value               = "eks-${var.cluster-name}-milpa-worker"
     propagate_at_launch = true
   }
 
@@ -347,11 +347,11 @@ resource "aws_autoscaling_group" "workers" {
   max_size             = 1
   min_size             = 1
   name                 = "${var.cluster-name}-workers"
-  vpc_zone_identifier  = "${aws_subnet.demo.*.id}"
+  vpc_zone_identifier  = "${aws_subnet.subnets.*.id}"
 
   tag {
     key                 = "Name"
-    value               = "terraform-milpa-eks-${var.cluster-name}"
+    value               = "eks-${var.cluster-name}-worker"
     propagate_at_launch = true
   }
 
