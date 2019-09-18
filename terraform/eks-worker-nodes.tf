@@ -145,42 +145,26 @@ resource "aws_security_group" "worker-node" {
     cidr_blocks = ["${aws_vpc.demo.cidr_block}"]
   }
 
+  ingress {
+    from_port                = 1025
+    to_port                  = 65535
+    protocol                 = "tcp"
+    security_groups = ["${aws_security_group.demo-cluster.id}"]
+  }
+
+  ingress {
+    from_port                = 22
+    to_port                  = 22
+    protocol                 = "tcp"
+    cidr_blocks              = ["0.0.0.0/0"]
+  }
+
   tags = "${
     map(
      "Name", "terraform-eks-worker-node",
      "kubernetes.io/cluster/${var.cluster-name}", "owned",
     )
   }"
-}
-
-resource "aws_security_group_rule" "worker-node-ingress-self" {
-  description              = "Allow node to communicate with each other"
-  from_port                = 0
-  protocol                 = "-1"
-  security_group_id        = "${aws_security_group.worker-node.id}"
-  source_security_group_id = "${aws_security_group.worker-node.id}"
-  to_port                  = 65535
-  type                     = "ingress"
-}
-
-resource "aws_security_group_rule" "worker-node-ingress-cluster" {
-  description              = "Allow worker Kubelets and pods to receive communication from the cluster control plane"
-  from_port                = 1025
-  protocol                 = "tcp"
-  security_group_id        = "${aws_security_group.worker-node.id}"
-  source_security_group_id = "${aws_security_group.demo-cluster.id}"
-  to_port                  = 65535
-  type                     = "ingress"
-}
-
-resource "aws_security_group_rule" "worker-node-ingress-ssh" {
-  description              = "Allow SSH access to worker nodes"
-  from_port                = 0
-  protocol                 = "tcp"
-  security_group_id        = "${aws_security_group.worker-node.id}"
-  cidr_blocks              = ["0.0.0.0/0"]
-  to_port                  = 22
-  type                     = "ingress"
 }
 
 data "aws_ami" "eks-worker" {
