@@ -124,10 +124,6 @@ users:
         - "-i"
         - "${var.cluster-name}"
 KUBECONFIG
-
-  kube_proxy_patch = <<KUBEPROXY
-{"spec":{"template":{"spec":{"$setElementOrder/containers":[{"name":"kube-proxy"}],"containers":[{"command":["/bin/sh","-c","kube-proxy --masquerade-all --resource-container=\"\" --oom-score-adj=-998 --master=${aws_eks_cluster.demo.endpoint} --kubeconfig=/var/lib/kube-proxy/kubeconfig --proxy-mode=iptables --v=2 1\u003e\u003e/var/log/kube-proxy.log 2\u003e\u00261"],"name":"kube-proxy"}]}}}}
-KUBEPROXY
 }
 
 resource "null_resource" "update-config" {
@@ -147,17 +143,23 @@ resource "null_resource" "update-config" {
 
   # Allow view access to cluster resources for kiyot.
   provisioner "local-exec" {
-    command = "kubectl create clusterrolebinding cluster-system-anonymous --clusterrole=view --user=system:anonymous"
+    command = "bash update-config.sh"
     environment = {
-      KUBECONFIG = "kubeconfig"
-    }
-  }
-
-  # Edit kube-proxy flags.
-  provisioner "local-exec" {
-    command = "kubectl patch -n kube-system daemonset kube-proxy -p '${local.kube_proxy_patch}'"
-    environment = {
-      KUBECONFIG = "kubeconfig"
+      KUBECONFIG            = "kubeconfig"
+      node_nametag          = var.cluster-name
+      aws_access_key_id     = var.aws-access-key-id
+      aws_secret_access_key = var.aws-secret-access-key
+      aws_region            = var.region
+      default_instance_type = var.default-instance-type
+      default_volume_size   = var.default-volume-size
+      boot_image_tags       = jsonencode(var.boot-image-tags)
+      license_key           = var.license-key
+      license_id            = var.license-id
+      license_username      = var.license-username
+      license_password      = var.license-password
+      itzo_url              = var.itzo-url
+      itzo_version          = var.itzo-version
+      milpa_image           = var.milpa-image
     }
   }
 }

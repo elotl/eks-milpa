@@ -188,24 +188,103 @@ USERDATA
   milpa-worker-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
-yum -y install jq python-pip
-mkdir -p /etc/cni/net.d
+# Configure system.
+cat > /etc/modules-load.d/containerd.conf <<EOF
+overlay
+br_netfilter
+EOF
+modprobe overlay
+modprobe br_netfilter
+# Setup required sysctl params, these persist across reboots.
+cat > /etc/sysctl.d/99-kubernetes-cri.conf <<EOF
+net.bridge.bridge-nf-call-iptables  = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+EOF
+sysctl --system
+# Remove docker.
+yum -y remove docker
+# Install runc and containerd.
+curl -fL https://github.com/opencontainers/runc/releases/download/v1.0.0-rc8/runc.amd64 > /tmp/runc
+install -m 0755 /tmp/runc /usr/local/bin/
+curl -fL https://github.com/containerd/containerd/releases/download/v1.2.7/containerd-1.2.7.linux-amd64.tar.gz > /tmp/containerd.tgz
+tar -C /usr/local -xvf /tmp/containerd.tgz
+mkdir -p /etc/containerd
+/usr/local/bin/containerd config default > /etc/containerd/config.toml
+cat <<EOF > /etc/systemd/system/containerd.service
+[Unit]
+Description=containerd container runtime
+Documentation=https://containerd.io
+After=network.target
+[Service]
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/local/bin/containerd
+Delegate=yes
+KillMode=process
+Restart=always
+# Having non-zero Limit*s causes performance problems due to accounting overhead
+# in the kernel. We recommend using cgroups to do container-local accounting.
+LimitNPROC=infinity
+LimitCORE=infinity
+LimitNOFILE=1048576
+# Comment TasksMax if your systemd version does not supports it.
+# Only systemd 226 and above support this version.
+TasksMax=infinity
+[Install]
+WantedBy=multi-user.target
+EOF
+# Install criproxy.
+curl -fL https://github.com/elotl/criproxy/releases/download/v0.15.0/criproxy > /usr/local/bin/criproxy; chmod 755 /usr/local/bin/criproxy
+cat <<EOF > /etc/systemd/system/criproxy.service
+[Unit]
+Description=CRI Proxy
+Wants=containerd.service
+[Service]
+ExecStart=/usr/local/bin/criproxy -v 3 -logtostderr -connect /run/containerd/containerd.sock,kiyot:/run/milpa/kiyot.sock -listen /run/criproxy.sock
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+[Install]
+WantedBy=kubelet.service
+EOF
+systemctl daemon-reload
+systemctl restart criproxy
+# Configure kubelet.
 mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.demo.certificate_authority.0.data}" > /etc/kubernetes/pki/ca.crt
-curl -L -O https://download.elotl.co/milpa-installer-latest && chmod 755 milpa-installer-latest
-./milpa-installer-latest
-pip install yq
-yq -y ".clusterName=\"${var.cluster-name}\" | .cloud.aws.accessKeyID=\"${var.aws-access-key-id}\" | .cloud.aws.secretAccessKey=\"${var.aws-secret-access-key}\" | .cloud.aws.vpcID=\"\" | .nodes.defaultInstanceType=\"${var.default-instance-type}\" | .nodes.defaultVolumeSize=\"${var.default-volume-size}\" | .license.key=\"${var.license-key}\" | .license.id=\"${var.license-id}\" | .license.username=\"${var.license-username}\" | .license.password=\"${var.license-password}\"" /opt/milpa/etc/server.yml > /opt/milpa/etc/server.yml.new && mv /opt/milpa/etc/server.yml.new /opt/milpa/etc/server.yml
-sed -i 's#--milpa-endpoint 127.0.0.1:54555$#--milpa-endpoint 127.0.0.1:54555 --service-cluster-ip-range 172.20.0.0/16#' /etc/systemd/system/kiyot.service
-sed -i 's#--config /opt/milpa/etc/server.yml$#--config /opt/milpa/etc/server.yml --delete-cluster-lock-file#' /etc/systemd/system/milpa.service
-mkdir -p /etc/systemd/system/kubelet.service.d/
-echo -e "[Service]\nStartLimitInterval=0\nStartLimitIntervalSec=0\nRestart=always\nRestartSec=5" > /etc/systemd/system/kubelet.service.d/override.conf
-systemctl daemon-reload
-systemctl restart milpa; systemctl restart kiyot
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.demo.endpoint}' --b64-cluster-ca '${aws_eks_cluster.demo.certificate_authority.0.data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/opt/milpa/run/kiyot.sock --max-pods=1000' '${var.cluster-name}'
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.demo.endpoint}' --b64-cluster-ca '${aws_eks_cluster.demo.certificate_authority.0.data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=kubernetes.io/role=milpa-worker' --use-max-pods false '${var.cluster-name}'
 sed -i '/docker/d' /etc/systemd/system/kubelet.service
+# Override number of CPUs and memory cadvisor reports.
+infodir=/opt/kiyot/proc
+mkdir -p $infodir; rm -f $infodir/{cpu,mem}info
+for i in $(seq 0 1023); do
+    cat << EOF >> $infodir/cpuinfo
+processor	: $i
+physical id	: 0
+core id		: 0
+cpu MHz		: 2400.068
+EOF
+done
+mem=$((4096*1024*1024))
+cat << EOF > $infodir/meminfo
+$(printf "MemTotal:%15d kB" $mem)
+SwapTotal:             0 kB
+EOF
+cat <<EOF > /etc/systemd/system/kiyot-override-proc.service
+[Unit]
+Description=Override /proc info files
+Before=kubelet.service
+[Service]
+Type=oneshot
+ExecStart=/bin/mount --bind $infodir/cpuinfo /proc/cpuinfo
+ExecStart=/bin/mount --bind $infodir/meminfo /proc/meminfo
+RemainAfterExit=true
+ExecStop=/bin/umount /proc/cpuinfo
+ExecStop=/bin/umount /proc/meminfo
+StandardOutput=journal
+EOF
 systemctl daemon-reload
-systemctl stop docker
-rm -f /var/run/docker.sock; touch /var/run/docker.sock
+systemctl start kiyot-override-proc
+systemctl restart kubelet
 USERDATA
 }
 
