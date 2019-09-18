@@ -20,6 +20,7 @@ Next, you need to set a few variables for your new EKS cluster.
 
 ```
 $ cd terraform/
+$ cp env.tfvars.example env.tfvars
 $ vi env.tfvars # Check the comments in the file to see what each variables does.
 ```
 
@@ -31,6 +32,10 @@ $ terraform init # Only needed the first time you run terraform in this director
 Initializing provider plugins...
 - Checking for available provider plugins on https://releases.hashicorp.com...
 - Downloading plugin for provider "aws" (2.2.0)...
+
+[...]
+
+$ terraform destroy -var-file env.tfvars
 
 [...]
 
