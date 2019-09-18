@@ -84,7 +84,7 @@ resource "aws_security_group_rule" "demo-cluster-ingress-workstation-https" {
 resource "aws_eks_cluster" "demo" {
   name     = "${var.cluster-name}"
   role_arn = "${aws_iam_role.demo-cluster.arn}"
-  version  = "1.10"
+  version  = "1.14"
 
   vpc_config {
     security_group_ids = ["${aws_security_group.demo-cluster.id}"]
