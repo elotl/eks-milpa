@@ -45,8 +45,8 @@ CONFIGMAPAWSAUTH
 
 resource "null_resource" "allow-join" {
   depends_on = [
-    "aws_iam_role.worker-node",
-    "null_resource.update-config"
+    aws_iam_role.worker-node,
+    null_resource.update-config,
   ]
 
   provisioner "local-exec" {
@@ -59,22 +59,22 @@ resource "null_resource" "allow-join" {
 
 resource "aws_iam_role_policy_attachment" "worker-node-AmazonEKSWorkerNodePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = "${aws_iam_role.worker-node.name}"
+  role       = aws_iam_role.worker-node.name
 }
 
 resource "aws_iam_role_policy_attachment" "worker-node-AmazonEKS_CNI_Policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = "${aws_iam_role.worker-node.name}"
+  role       = aws_iam_role.worker-node.name
 }
 
 resource "aws_iam_role_policy_attachment" "worker-node-AmazonEC2ContainerRegistryReadOnly" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = "${aws_iam_role.worker-node.name}"
+  role       = aws_iam_role.worker-node.name
 }
 
 resource "aws_iam_role_policy" "k8s-milpa" {
-  name = "k8s-milpa-${var.cluster-name}"
-  role = "${aws_iam_role.worker-node.name}"
+  name   = "k8s-milpa-${var.cluster-name}"
+  role   = aws_iam_role.worker-node.name
   policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -123,58 +123,56 @@ EOF
 
 resource "aws_iam_instance_profile" "worker-node" {
   name = "${var.cluster-name}-eks-profile"
-  role = "${aws_iam_role.worker-node.name}"
+  role = aws_iam_role.worker-node.name
 }
 
 resource "aws_security_group" "worker-node" {
-  name        = "eks-worker-node-${var.cluster-name}"
+  name = "eks-worker-node-${var.cluster-name}"
   description = "Security group for all nodes in the cluster"
-  vpc_id      = "${aws_vpc.vpc.id}"
+  vpc_id = aws_vpc.vpc.id
 
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["${aws_vpc.vpc.cidr_block}"]
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = [aws_vpc.vpc.cidr_block]
   }
 
   ingress {
-    from_port                = 1025
-    to_port                  = 65535
-    protocol                 = "tcp"
-    security_groups = ["${aws_security_group.clustersg.id}"]
+    from_port = 1025
+    to_port = 65535
+    protocol = "tcp"
+    security_groups = [aws_security_group.clustersg.id]
   }
 
   ingress {
-    from_port                = 22
-    to_port                  = 22
-    protocol                 = "tcp"
-    cidr_blocks              = ["0.0.0.0/0"]
+    from_port = 22
+    to_port = 22
+    protocol = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  tags = "${
-    map(
-     "Name", "eks-worker-node-${var.cluster-name}",
-     "kubernetes.io/cluster/${var.cluster-name}", "owned",
-    )
-  }"
+  tags = {
+    "Name" = "eks-worker-node-${var.cluster-name}"
+    "kubernetes.io/cluster/${var.cluster-name}" = "owned"
+  }
 }
 
 data "aws_ami" "eks-worker" {
   filter {
-    name   = "name"
+    name = "name"
     values = ["amazon-eks-node-${aws_eks_cluster.cluster.version}-v*"]
   }
 
   most_recent = true
-  owners      = ["602401143452"] # Amazon EKS AMI Account ID
+  owners = ["602401143452"] # Amazon EKS AMI Account ID
 }
 
 # Userdata for regular workers and Milpa workers.
@@ -182,7 +180,7 @@ locals {
   worker-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority.0.data}' --kubelet-extra-args '--node-labels=kubernetes.io/role=worker' '${var.cluster-name}'
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' --kubelet-extra-args '--node-labels=kubernetes.io/role=worker' '${var.cluster-name}'
 USERDATA
 
   milpa-worker-userdata = <<USERDATA
@@ -250,8 +248,8 @@ EOF
 systemctl daemon-reload
 systemctl restart criproxy
 # Configure kubelet.
-mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.cluster.certificate_authority.0.data}" > /etc/kubernetes/pki/ca.crt
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority.0.data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=kubernetes.io/role=milpa-worker' --use-max-pods false '${var.cluster-name}'
+mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.cluster.certificate_authority[0].data}" > /etc/kubernetes/pki/ca.crt
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=kubernetes.io/role=milpa-worker' --use-max-pods false '${var.cluster-name}'
 sed -i '/docker/d' /etc/systemd/system/kubelet.service
 # Override number of CPUs and memory cadvisor reports.
 infodir=/opt/kiyot/proc
@@ -292,13 +290,13 @@ USERDATA
 # second one for regular worker nodes.
 resource "aws_launch_configuration" "milpa-worker" {
   associate_public_ip_address = true
-  iam_instance_profile        = "${aws_iam_instance_profile.worker-node.name}"
-  image_id                    = "${data.aws_ami.eks-worker.id}"
-  instance_type               = "t3.small"
-  name_prefix                 = "${var.cluster-name}-eks-milpa-launch-configuration"
-  security_groups             = ["${aws_security_group.worker-node.id}"]
-  user_data_base64            = "${base64encode(local.milpa-worker-userdata)}"
-  key_name = "${var.ssh-key-name}"
+  iam_instance_profile = aws_iam_instance_profile.worker-node.name
+  image_id = data.aws_ami.eks-worker.id
+  instance_type = "t3.small"
+  name_prefix = "${var.cluster-name}-eks-milpa-launch-configuration"
+  security_groups = [aws_security_group.worker-node.id]
+  user_data_base64 = base64encode(local.milpa-worker-userdata)
+  key_name = var.ssh-key-name
 
   lifecycle {
     create_before_destroy = true
@@ -307,13 +305,13 @@ resource "aws_launch_configuration" "milpa-worker" {
 
 resource "aws_launch_configuration" "worker" {
   associate_public_ip_address = true
-  iam_instance_profile        = "${aws_iam_instance_profile.worker-node.name}"
-  image_id                    = "${data.aws_ami.eks-worker.id}"
-  instance_type               = "m5.large"
-  name_prefix                 = "${var.cluster-name}-eks-launch-configuration"
-  security_groups             = ["${aws_security_group.worker-node.id}"]
-  user_data_base64            = "${base64encode(local.worker-userdata)}"
-  key_name = "${var.ssh-key-name}"
+  iam_instance_profile = aws_iam_instance_profile.worker-node.name
+  image_id = data.aws_ami.eks-worker.id
+  instance_type = "m5.large"
+  name_prefix = "${var.cluster-name}-eks-launch-configuration"
+  security_groups = [aws_security_group.worker-node.id]
+  user_data_base64 = base64encode(local.worker-userdata)
+  key_name = var.ssh-key-name
 
   lifecycle {
     create_before_destroy = true
@@ -321,43 +319,43 @@ resource "aws_launch_configuration" "worker" {
 }
 
 resource "aws_autoscaling_group" "milpa-workers" {
-  desired_capacity     = 1
-  launch_configuration = "${aws_launch_configuration.milpa-worker.id}"
-  max_size             = 1
-  min_size             = 1
-  name                 = "${var.cluster-name}-milpa-workers"
-  vpc_zone_identifier  = "${aws_subnet.subnets.*.id}"
+  desired_capacity = 1
+  launch_configuration = aws_launch_configuration.milpa-worker.id
+  max_size = 1
+  min_size = 1
+  name = "${var.cluster-name}-milpa-workers"
+  vpc_zone_identifier = aws_subnet.subnets.*.id
 
   tag {
-    key                 = "Name"
-    value               = "eks-${var.cluster-name}-milpa-worker"
+    key = "Name"
+    value = "eks-${var.cluster-name}-milpa-worker"
     propagate_at_launch = true
   }
 
   tag {
-    key                 = "kubernetes.io/cluster/${var.cluster-name}"
-    value               = "owned"
+    key = "kubernetes.io/cluster/${var.cluster-name}"
+    value = "owned"
     propagate_at_launch = true
   }
 }
 
 resource "aws_autoscaling_group" "workers" {
-  desired_capacity     = 1
-  launch_configuration = "${aws_launch_configuration.worker.id}"
-  max_size             = 1
-  min_size             = 1
-  name                 = "${var.cluster-name}-workers"
-  vpc_zone_identifier  = "${aws_subnet.subnets.*.id}"
+  desired_capacity = 1
+  launch_configuration = aws_launch_configuration.worker.id
+  max_size = 1
+  min_size = 1
+  name = "${var.cluster-name}-workers"
+  vpc_zone_identifier = aws_subnet.subnets.*.id
 
   tag {
-    key                 = "Name"
-    value               = "eks-${var.cluster-name}-worker"
+    key = "Name"
+    value = "eks-${var.cluster-name}-worker"
     propagate_at_launch = true
   }
 
   tag {
-    key                 = "kubernetes.io/cluster/${var.cluster-name}"
-    value               = "owned"
+    key = "kubernetes.io/cluster/${var.cluster-name}"
+    value = "owned"
     propagate_at_launch = true
   }
 }

@@ -26,7 +26,7 @@ POLICY
 
 resource "aws_iam_role_policy" "eks-policy" {
   name_prefix = "${var.cluster-name}-eks-policy"
-  role = "${aws_iam_role.eks-role.id}"
+  role = aws_iam_role.eks-role.id
 
   policy = <<EOF
 {
@@ -46,18 +46,18 @@ EOF
 
 resource "aws_iam_role_policy_attachment" "cluster-AmazonEKSClusterPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = "${aws_iam_role.eks-role.name}"
+  role       = aws_iam_role.eks-role.name
 }
 
 resource "aws_iam_role_policy_attachment" "cluster-AmazonEKSServicePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-  role       = "${aws_iam_role.eks-role.name}"
+  role       = aws_iam_role.eks-role.name
 }
 
 resource "aws_security_group" "clustersg" {
   name        = "eks-${var.cluster-name}"
   description = "Cluster communication with worker nodes"
-  vpc_id      = "${aws_vpc.vpc.id}"
+  vpc_id      = aws_vpc.vpc.id
 
   egress {
     from_port   = 0
@@ -76,24 +76,24 @@ resource "aws_security_group_rule" "cluster-ingress-workstation-https" {
   description       = "Allow access to the cluster API Server"
   from_port         = 443
   protocol          = "tcp"
-  security_group_id = "${aws_security_group.clustersg.id}"
+  security_group_id = aws_security_group.clustersg.id
   to_port           = 443
   type              = "ingress"
 }
 
 resource "aws_eks_cluster" "cluster" {
-  name     = "${var.cluster-name}"
-  role_arn = "${aws_iam_role.eks-role.arn}"
+  name     = var.cluster-name
+  role_arn = aws_iam_role.eks-role.arn
   version  = "1.14"
 
   vpc_config {
-    security_group_ids = ["${aws_security_group.clustersg.id}"]
-    subnet_ids         = "${aws_subnet.subnets.*.id}"
+    security_group_ids = [aws_security_group.clustersg.id]
+    subnet_ids         = aws_subnet.subnets.*.id
   }
 
   depends_on = [
-    "aws_iam_role_policy_attachment.cluster-AmazonEKSClusterPolicy",
-    "aws_iam_role_policy_attachment.cluster-AmazonEKSServicePolicy",
+    aws_iam_role_policy_attachment.cluster-AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.cluster-AmazonEKSServicePolicy,
   ]
 }
 
@@ -103,7 +103,7 @@ apiVersion: v1
 clusters:
 - cluster:
     server: ${aws_eks_cluster.cluster.endpoint}
-    certificate-authority-data: ${aws_eks_cluster.cluster.certificate_authority.0.data}
+    certificate-authority-data: ${aws_eks_cluster.cluster.certificate_authority[0].data}
   name: kubernetes
 contexts:
 - context:
@@ -127,7 +127,7 @@ KUBECONFIG
 }
 
 resource "null_resource" "update-config" {
-  depends_on = ["aws_eks_cluster.cluster"]
+  depends_on = [aws_eks_cluster.cluster]
 
   provisioner "local-exec" {
     command = "echo \"${local.kubeconfig}\" > kubeconfig"
@@ -145,21 +145,21 @@ resource "null_resource" "update-config" {
   provisioner "local-exec" {
     command = "bash update-config.sh"
     environment = {
-      KUBECONFIG            = "kubeconfig"
-      node_nametag          = var.cluster-name
-      aws_access_key_id     = var.aws-access-key-id
+      KUBECONFIG = "kubeconfig"
+      node_nametag = var.cluster-name
+      aws_access_key_id = var.aws-access-key-id
       aws_secret_access_key = var.aws-secret-access-key
-      aws_region            = var.region
+      aws_region = var.region
       default_instance_type = var.default-instance-type
-      default_volume_size   = var.default-volume-size
-      boot_image_tags       = jsonencode(var.boot-image-tags)
-      license_key           = var.license-key
-      license_id            = var.license-id
-      license_username      = var.license-username
-      license_password      = var.license-password
-      itzo_url              = var.itzo-url
-      itzo_version          = var.itzo-version
-      milpa_image           = var.milpa-image
+      default_volume_size = var.default-volume-size
+      boot_image_tags = jsonencode(var.boot-image-tags)
+      license_key = var.license-key
+      license_id = var.license-id
+      license_username = var.license-username
+      license_password = var.license-password
+      itzo_url = var.itzo-url
+      itzo_version = var.itzo-version
+      milpa_image = var.milpa-image
     }
   }
 }
