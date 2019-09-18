@@ -7,7 +7,7 @@ data "aws_instances" "eks-workers" {
     "aws_autoscaling_group.milpa-workers",
     "aws_autoscaling_group.workers"
   ]
-  instance_tags {
+  instance_tags = {
     Name = "terraform-milpa-eks-${var.cluster-name}"
   }
 }

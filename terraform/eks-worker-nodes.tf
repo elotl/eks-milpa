@@ -263,7 +263,7 @@ resource "aws_autoscaling_group" "milpa-workers" {
   max_size             = 1
   min_size             = 1
   name                 = "${var.cluster-name}-milpa-workers"
-  vpc_zone_identifier  = ["${aws_subnet.demo.*.id}"]
+  vpc_zone_identifier  = "${aws_subnet.demo.*.id}"
 
   tag {
     key                 = "Name"
@@ -284,7 +284,7 @@ resource "aws_autoscaling_group" "workers" {
   max_size             = 1
   min_size             = 1
   name                 = "${var.cluster-name}-workers"
-  vpc_zone_identifier  = ["${aws_subnet.demo.*.id}"]
+  vpc_zone_identifier  = "${aws_subnet.demo.*.id}"
 
   tag {
     key                 = "Name"
