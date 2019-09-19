@@ -70,3 +70,10 @@ variable "region" {
 variable "milpa-image" {
   default = "elotl/milpa"
 }
+
+variable "blacklisted-azs" {
+  // Blacklist certain AZs to prevent capacity problems. In us-east-1e, nitro
+  // instances are not supported currently.
+  type    = list(string)
+  default = ["use1-az3"]
+}

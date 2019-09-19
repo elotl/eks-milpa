@@ -19,4 +19,6 @@ data "aws_region" "current" {
 }
 
 data "aws_availability_zones" "available" {
+  state                 = "available"
+  blacklisted_zone_ids  = var.blacklisted-azs
 }
