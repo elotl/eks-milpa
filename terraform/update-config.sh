@@ -4,7 +4,7 @@ set -eu
 
 # Check what service IP CIDR is in use.
 service_cidr="10.100.0.0/16"
-ten_range=$(curl -s http://169.254.169.254/latest/meta-data/network/interfaces/macs/$MAC/vpc-ipv4-cidr-blocks | grep -c '^10\..*' || true )
+ten_range=$(echo ${vpc_cidr} | grep -c '^10\..*' || true )
 if [[ "$ten_range" != "0" ]] ; then
     service_cidr="172.20.0.0/16"
 fi

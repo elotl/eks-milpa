@@ -144,6 +144,7 @@ resource "null_resource" "update-config" {
     command = "bash update-config.sh"
     environment = {
       KUBECONFIG = "kubeconfig"
+      vpc_cidr = aws_vpc.vpc.cidr_block
       node_nametag = var.cluster-name
       aws_access_key_id = var.aws-access-key-id
       aws_secret_access_key = var.aws-secret-access-key
