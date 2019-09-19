@@ -63,6 +63,7 @@ variable "license-password" {
 }
 
 variable "region" {
+  // Currently Milpa only supports us-east-1.
   default = "us-east-1"
 }
 
