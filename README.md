@@ -6,9 +6,11 @@ This document will go through the steps required to get a nodeless kubernetes cl
 
 Prerequisites:
 * An AWS account that can create and manage EKS clusters.
-* A license for Milpa. Get one for free [here](https://www.elotl.co/trial).
 * Terraform is used for provisioning the EKS cluster. Get it [here](https://www.terraform.io/downloads.html).
 * Kubectl for interacting with Kubernetes. Install a compatible version from [here](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl). Kubectl supports one release of version skew, and here we use Kubernetes 1.10, so you will need kubectl 1.10 or 1.11.
+
+Optional:
+* A license for Milpa. Get one for free [here](https://www.elotl.co/trial). If no license is set, Milpa will switch into Developer Edition mode, which limits the number of pods it will handle.
 
 Note: creating and running an EKS cluster on AWS will cost you money.
 
@@ -20,6 +22,7 @@ Next, you need to set a few variables for your new EKS cluster.
 
 ```
 $ cd terraform/
+$ cp env.tfvars.example env.tfvars
 $ vi env.tfvars # Check the comments in the file to see what each variables does.
 ```
 
@@ -31,6 +34,10 @@ $ terraform init # Only needed the first time you run terraform in this director
 Initializing provider plugins...
 - Checking for available provider plugins on https://releases.hashicorp.com...
 - Downloading plugin for provider "aws" (2.2.0)...
+
+[...]
+
+$ terraform destroy -var-file env.tfvars
 
 [...]
 

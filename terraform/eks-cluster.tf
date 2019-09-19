@@ -5,8 +5,8 @@
 #  * EKS Cluster
 #
 
-resource "aws_iam_role" "demo-cluster" {
-  name_prefix = "${var.cluster-name}-cluster-role"
+resource "aws_iam_role" "eks-role" {
+  name_prefix = "${var.cluster-name}-eks-role"
 
   assume_role_policy = <<POLICY
 {
@@ -26,7 +26,7 @@ POLICY
 
 resource "aws_iam_role_policy" "eks-policy" {
   name_prefix = "${var.cluster-name}-eks-policy"
-  role = "${aws_iam_role.demo-cluster.id}"
+  role = aws_iam_role.eks-role.id
 
   policy = <<EOF
 {
@@ -44,20 +44,20 @@ resource "aws_iam_role_policy" "eks-policy" {
 EOF
 }
 
-resource "aws_iam_role_policy_attachment" "demo-cluster-AmazonEKSClusterPolicy" {
+resource "aws_iam_role_policy_attachment" "cluster-AmazonEKSClusterPolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = "${aws_iam_role.demo-cluster.name}"
+  role       = aws_iam_role.eks-role.name
 }
 
-resource "aws_iam_role_policy_attachment" "demo-cluster-AmazonEKSServicePolicy" {
+resource "aws_iam_role_policy_attachment" "cluster-AmazonEKSServicePolicy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-  role       = "${aws_iam_role.demo-cluster.name}"
+  role       = aws_iam_role.eks-role.name
 }
 
-resource "aws_security_group" "demo-cluster" {
-  name        = "terraform-eks-demo-cluster"
+resource "aws_security_group" "clustersg" {
+  name        = "eks-${var.cluster-name}"
   description = "Cluster communication with worker nodes"
-  vpc_id      = "${aws_vpc.demo.id}"
+  vpc_id      = aws_vpc.vpc.id
 
   egress {
     from_port   = 0
@@ -66,34 +66,32 @@ resource "aws_security_group" "demo-cluster" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port         = 443
+    to_port           = 443
+    protocol          = "tcp"
+    cidr_blocks       = ["0.0.0.0/0"]
+    description       = "Allow access to the cluster API Server"
+  }
+
   tags = {
-    Name = "terraform-eks-demo"
+    Name = "eks-${var.cluster-name}"
   }
 }
 
-resource "aws_security_group_rule" "demo-cluster-ingress-workstation-https" {
-  cidr_blocks       = ["0.0.0.0/0"]
-  description       = "Allow access to the cluster API Server"
-  from_port         = 443
-  protocol          = "tcp"
-  security_group_id = "${aws_security_group.demo-cluster.id}"
-  to_port           = 443
-  type              = "ingress"
-}
-
-resource "aws_eks_cluster" "demo" {
-  name     = "${var.cluster-name}"
-  role_arn = "${aws_iam_role.demo-cluster.arn}"
-  version  = "1.10"
+resource "aws_eks_cluster" "cluster" {
+  name     = var.cluster-name
+  role_arn = aws_iam_role.eks-role.arn
+  version  = "1.14"
 
   vpc_config {
-    security_group_ids = ["${aws_security_group.demo-cluster.id}"]
-    subnet_ids         = ["${aws_subnet.demo.*.id}"]
+    security_group_ids = [aws_security_group.clustersg.id]
+    subnet_ids         = aws_subnet.subnets.*.id
   }
 
   depends_on = [
-    "aws_iam_role_policy_attachment.demo-cluster-AmazonEKSClusterPolicy",
-    "aws_iam_role_policy_attachment.demo-cluster-AmazonEKSServicePolicy",
+    aws_iam_role_policy_attachment.cluster-AmazonEKSClusterPolicy,
+    aws_iam_role_policy_attachment.cluster-AmazonEKSServicePolicy,
   ]
 }
 
@@ -102,8 +100,8 @@ locals {
 apiVersion: v1
 clusters:
 - cluster:
-    server: ${aws_eks_cluster.demo.endpoint}
-    certificate-authority-data: ${aws_eks_cluster.demo.certificate_authority.0.data}
+    server: ${aws_eks_cluster.cluster.endpoint}
+    certificate-authority-data: ${aws_eks_cluster.cluster.certificate_authority[0].data}
   name: kubernetes
 contexts:
 - context:
@@ -124,14 +122,10 @@ users:
         - "-i"
         - "${var.cluster-name}"
 KUBECONFIG
-
-  kube_proxy_patch = <<KUBEPROXY
-{"spec":{"template":{"spec":{"$setElementOrder/containers":[{"name":"kube-proxy"}],"containers":[{"command":["/bin/sh","-c","kube-proxy --masquerade-all --resource-container=\"\" --oom-score-adj=-998 --master=${aws_eks_cluster.demo.endpoint} --kubeconfig=/var/lib/kube-proxy/kubeconfig --proxy-mode=iptables --v=2 1\u003e\u003e/var/log/kube-proxy.log 2\u003e\u00261"],"name":"kube-proxy"}]}}}}
-KUBEPROXY
 }
 
 resource "null_resource" "update-config" {
-  depends_on = ["aws_eks_cluster.demo"]
+  depends_on = [aws_eks_cluster.cluster]
 
   provisioner "local-exec" {
     command = "echo \"${local.kubeconfig}\" > kubeconfig"
@@ -147,17 +141,23 @@ resource "null_resource" "update-config" {
 
   # Allow view access to cluster resources for kiyot.
   provisioner "local-exec" {
-    command = "kubectl create clusterrolebinding cluster-system-anonymous --clusterrole=view --user=system:anonymous"
+    command = "bash update-config.sh"
     environment = {
       KUBECONFIG = "kubeconfig"
-    }
-  }
-
-  # Edit kube-proxy flags.
-  provisioner "local-exec" {
-    command = "kubectl patch -n kube-system daemonset kube-proxy -p '${local.kube_proxy_patch}'"
-    environment = {
-      KUBECONFIG = "kubeconfig"
+      node_nametag = var.cluster-name
+      aws_access_key_id = var.aws-access-key-id
+      aws_secret_access_key = var.aws-secret-access-key
+      aws_region = var.region
+      default_instance_type = var.default-instance-type
+      default_volume_size = var.default-volume-size
+      boot_image_tags = jsonencode(var.boot-image-tags)
+      license_key = var.license-key
+      license_id = var.license-id
+      license_username = var.license-username
+      license_password = var.license-password
+      itzo_url = var.itzo-url
+      itzo_version = var.itzo-version
+      milpa_image = var.milpa-image
     }
   }
 }

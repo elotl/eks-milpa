@@ -1,45 +1,79 @@
-#
-# Variables Configuration
-#
-
-variable "cluster-name" {
-  type    = "string"
+variable "ssh-key-name" {
 }
 
-variable "ssh-key-name" {
-  type    = "string"
+variable "cluster-name" {
 }
 
 variable "aws-access-key-id" {
-  type = "string"
+  // If empty, IAM will be used.
+  default = ""
 }
 
 variable "aws-secret-access-key" {
-  type = "string"
+  // If empty, IAM will be used.
+  default = ""
+}
+
+variable "itzo-url" {
+  // The URL to download the node agent from.
+  default = "http://itzo-download.s3.amazonaws.com"
+}
+
+variable "itzo-version" {
+  // The version of node agent to use.
+  default = "latest"
 }
 
 variable "default-instance-type" {
-  type = "string"
-  default = "t3.large"
+  // This this the default cloud instance type. Pods that don't specify their
+  // cpu and memory requirements will be launched on this instance type.
+  // Example: "t3.nano".
+  default = "t3.nano"
 }
 
 variable "default-volume-size" {
-  type = "string"
-  default = "15Gi"
+  // This this the default volume size used on the cloud instance. Example: "15Gi".
+  default = "10Gi"
+}
+
+variable "boot-image-tags" {
+  // This is a JSON dictionary of key-value pairs, describing the image tags
+  // Milpa will use when finding the AMI to launch cloud instances with. Only
+  // change it when you know what you are doing.
+  default = {
+    "company" = "elotl"
+    "product" = "milpa"
+  }
 }
 
 variable "license-key" {
-  type = "string"
+  default = ""
 }
 
 variable "license-id" {
-  type = "string"
+  default = ""
 }
 
 variable "license-username" {
-  type = "string"
+  default = ""
 }
 
 variable "license-password" {
-  type = "string"
+  default = ""
+}
+
+variable "region" {
+  // Currently Milpa only supports us-east-1.
+  default = "us-east-1"
+}
+
+variable "milpa-image" {
+  default = "elotl/milpa"
+}
+
+variable "blacklisted-azs" {
+  // Blacklist certain AZs to prevent capacity problems. In us-east-1e, nitro
+  // instances are not supported currently.
+  type    = list(string)
+  default = ["use1-az3"]
 }
