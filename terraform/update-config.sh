@@ -187,8 +187,10 @@ rules:
   - ""
   resources:
   - pods
+  - nodes
   verbs:
   - get
+  - list
 - apiGroups:
   - apiextensions.k8s.io
   resources:
