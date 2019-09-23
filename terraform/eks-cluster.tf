@@ -127,6 +127,11 @@ KUBECONFIG
 resource "null_resource" "update-config" {
   depends_on = [aws_eks_cluster.cluster]
 
+  triggers = {
+    update_config_file = "${sha1(file("${path.module}/update-config.sh"))}"
+    create_webhook_file = "${sha1(file("${path.module}/create-webhook.sh"))}"
+ }
+
   provisioner "local-exec" {
     command = "echo \"${local.kubeconfig}\" > kubeconfig"
   }
@@ -139,7 +144,6 @@ resource "null_resource" "update-config" {
     }
   }
 
-  # Allow view access to cluster resources for kiyot.
   provisioner "local-exec" {
     command = "bash update-config.sh"
     environment = {
@@ -159,6 +163,13 @@ resource "null_resource" "update-config" {
       itzo_url = var.itzo-url
       itzo_version = var.itzo-version
       milpa_image = var.milpa-image
+    }
+  }
+
+  provisioner "local-exec" {
+    command = "bash create-webhook.sh"
+    environment = {
+      KUBECONFIG = "kubeconfig"
     }
   }
 }
