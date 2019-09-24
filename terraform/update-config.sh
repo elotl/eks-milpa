@@ -34,7 +34,7 @@ spec:
         kubernetes.io/target-runtime: kiyot
     spec:
       nodeSelector:
-        kubernetes.io/role: milpa-worker
+        elotl.co/milpa-worker: ""
       containers:
       - image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.14.6
         command:
@@ -111,7 +111,7 @@ spec:
     spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
-        kubernetes.io/role: milpa-worker
+        elotl.co/milpa-worker: ""
       containers:
       - image: elotl/kiyot-device-plugin:latest
         name: kiyot-device-plugin
@@ -246,7 +246,7 @@ spec:
     spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
-        kubernetes.io/role: milpa-worker
+        elotl.co/milpa-worker: ""
       restartPolicy: Always
       hostNetwork: true
       serviceAccountName: kiyot

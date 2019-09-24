@@ -180,7 +180,7 @@ locals {
   worker-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' --kubelet-extra-args '--node-labels=kubernetes.io/role=worker' '${var.cluster-name}'
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' '${var.cluster-name}'
 USERDATA
 
   milpa-worker-userdata = <<USERDATA
@@ -249,7 +249,7 @@ systemctl daemon-reload
 systemctl restart criproxy
 # Configure kubelet.
 mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.cluster.certificate_authority[0].data}" > /etc/kubernetes/pki/ca.crt
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=kubernetes.io/role=milpa-worker' --use-max-pods false '${var.cluster-name}'
+/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=elotl.co/milpa-worker=' --use-max-pods false '${var.cluster-name}'
 sed -i '/docker/d' /etc/systemd/system/kubelet.service
 # Override number of CPUs and memory cadvisor reports.
 infodir=/opt/kiyot/proc
