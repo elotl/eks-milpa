@@ -34,7 +34,7 @@ spec:
         kubernetes.io/target-runtime: kiyot
     spec:
       nodeSelector:
-        kubernetes.io/role: milpa-worker
+        elotl.co/milpa-worker: ""
       containers:
       - image: 602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.14.6
         command:
@@ -96,12 +96,15 @@ EOF
 kubectl apply -f /tmp/kube-proxy-milpa.yaml
 
 cat <<EOF > /tmp/kiyot-device-plugin.yaml
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kiyot-device-plugin
   namespace: kube-system
 spec:
+  selector:
+    matchLabels:
+      name: kiyot-device-plugin
   updateStrategy:
     type: RollingUpdate
   template:
@@ -111,7 +114,7 @@ spec:
     spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
-        kubernetes.io/role: milpa-worker
+        elotl.co/milpa-worker: ""
       containers:
       - image: elotl/kiyot-device-plugin:latest
         name: kiyot-device-plugin
@@ -231,12 +234,15 @@ subjects:
   name: kiyot
   namespace: kube-system
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: kiyot
   namespace: kube-system
 spec:
+  selector:
+    matchLabels:
+      name: kiyot
   updateStrategy:
     type: RollingUpdate
   template:
@@ -246,7 +252,7 @@ spec:
     spec:
       priorityClassName: "system-node-critical"
       nodeSelector:
-        kubernetes.io/role: milpa-worker
+        elotl.co/milpa-worker: ""
       restartPolicy: Always
       hostNetwork: true
       serviceAccountName: kiyot

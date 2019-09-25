@@ -50,17 +50,7 @@ Do you want to perform these actions?
   Enter a value:
 ```
 
-Type `yes`, and terraform will start creating your EKS infrastructure. This will take a few minutes to complete. When it finishes, you will see some output from terraform like this:
-
-```
-Outputs:
-
-worker-ips = [
-    3.94.163.95
-]
-```
-
-This is the IP address of the worker node in the cluster.
+Type `yes`, and terraform will start creating your EKS infrastructure. This will take a few minutes to complete.
 
 ## Configure your Cluster
 
