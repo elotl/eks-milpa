@@ -129,7 +129,6 @@ resource "null_resource" "update-config" {
 
   triggers = {
     update_config_file = "${sha1(file("${path.module}/update-config.sh"))}"
-    create_webhook_file = "${sha1(file("${path.module}/create-webhook.sh"))}"
  }
 
   provisioner "local-exec" {
@@ -163,13 +162,6 @@ resource "null_resource" "update-config" {
       itzo_url = var.itzo-url
       itzo_version = var.itzo-version
       milpa_image = var.milpa-image
-    }
-  }
-
-  provisioner "local-exec" {
-    command = "bash create-webhook.sh"
-    environment = {
-      KUBECONFIG = "kubeconfig"
     }
   }
 }

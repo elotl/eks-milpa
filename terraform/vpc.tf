@@ -18,7 +18,7 @@ resource "aws_vpc" "vpc" {
     # Remove any leftover instance, security group etc Milpa created. They
     # would prevent terraform from destroying the VPC.
     when        = destroy
-    command     = "./cleanup-vpc.sh ${self.id}"
+    command     = "./cleanup-vpc.sh ${self.id} ${var.cluster-name}"
     interpreter = ["/bin/bash", "-c"]
   }
 }
@@ -47,7 +47,7 @@ resource "aws_internet_gateway" "igw" {
     # Remove any leftover instance, security group etc Milpa created. They
     # would prevent terraform from destroying the VPC.
     when        = destroy
-    command     = "./cleanup-vpc.sh ${self.vpc_id}"
+    command     = "./cleanup-vpc.sh ${self.vpc_id} ${var.cluster-name}"
     interpreter = ["/bin/bash", "-c"]
   }
 }
