@@ -7,8 +7,8 @@ This document will go through the steps required to get a nodeless kubernetes cl
 Prerequisites:
 * An AWS account that can create and manage EKS clusters.
 * Terraform is used for provisioning the EKS cluster. Get it [here](https://www.terraform.io/downloads.html).
-* Kubectl for interacting with Kubernetes. Install a compatible version from [here](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl). Kubectl supports one release of version skew, and here we use Kubernetes 1.10, so you will need kubectl 1.10 or 1.11.
-* Ensure `AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID` are all exported to the appropriate values
+* Kubectl for interacting with Kubernetes. Install a compatible version from [here](https://kubernetes.io/docs/tasks/tools/install-kubectl/#install-kubectl). We recommend at least v1.14.
+* Ensure `AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID` are all exported to the appropriate values.
 
 Optional:
 * A license for Milpa. Get one for free [here](https://www.elotl.co/trial). If no license is set, Milpa will switch into Developer Edition mode, which limits the number of pods it will handle.
