@@ -175,114 +175,22 @@ data "aws_ami" "eks-worker" {
   owners = ["602401143452"] # Amazon EKS AMI Account ID
 }
 
+data "aws_ami" "eks-milpa-worker" {
+  filter {
+    name = "name"
+    values = ["eks-milpa-worker-${aws_eks_cluster.cluster.version}-v*"]
+  }
+
+  most_recent = true
+  owners = ["689494258501"] # Elotl AWS Account ID
+}
+
 # Userdata for regular workers and Milpa workers.
 locals {
   worker-userdata = <<USERDATA
 #!/bin/bash
 set -o xtrace
 /etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' '${var.cluster-name}'
-USERDATA
-
-  milpa-worker-userdata = <<USERDATA
-#!/bin/bash
-set -o xtrace
-# Configure system.
-cat > /etc/modules-load.d/containerd.conf <<EOF
-overlay
-br_netfilter
-EOF
-modprobe overlay
-modprobe br_netfilter
-# Setup required sysctl params, these persist across reboots.
-cat > /etc/sysctl.d/99-kubernetes-cri.conf <<EOF
-net.bridge.bridge-nf-call-iptables  = 1
-net.ipv4.ip_forward                 = 1
-net.bridge.bridge-nf-call-ip6tables = 1
-EOF
-sysctl --system
-# Remove docker.
-yum -y remove docker
-# Install runc and containerd.
-curl -fL https://github.com/opencontainers/runc/releases/download/v1.0.0-rc8/runc.amd64 > /tmp/runc
-install -m 0755 /tmp/runc /usr/local/bin/
-curl -fL https://github.com/containerd/containerd/releases/download/v1.2.7/containerd-1.2.7.linux-amd64.tar.gz > /tmp/containerd.tgz
-tar -C /usr/local -xvf /tmp/containerd.tgz
-mkdir -p /etc/containerd
-/usr/local/bin/containerd config default > /etc/containerd/config.toml
-cat <<EOF > /etc/systemd/system/containerd.service
-[Unit]
-Description=containerd container runtime
-Documentation=https://containerd.io
-After=network.target
-[Service]
-ExecStartPre=-/sbin/modprobe overlay
-ExecStart=/usr/local/bin/containerd
-Delegate=yes
-KillMode=process
-Restart=always
-# Having non-zero Limit*s causes performance problems due to accounting overhead
-# in the kernel. We recommend using cgroups to do container-local accounting.
-LimitNPROC=infinity
-LimitCORE=infinity
-LimitNOFILE=1048576
-# Comment TasksMax if your systemd version does not supports it.
-# Only systemd 226 and above support this version.
-TasksMax=infinity
-[Install]
-WantedBy=multi-user.target
-EOF
-# Install criproxy.
-curl -fL https://github.com/elotl/criproxy/releases/download/v0.15.0/criproxy > /usr/local/bin/criproxy; chmod 755 /usr/local/bin/criproxy
-cat <<EOF > /etc/systemd/system/criproxy.service
-[Unit]
-Description=CRI Proxy
-Wants=containerd.service
-[Service]
-ExecStart=/usr/local/bin/criproxy -v 3 -logtostderr -connect /run/containerd/containerd.sock,kiyot:/run/milpa/kiyot.sock -listen /run/criproxy.sock
-Restart=always
-StartLimitInterval=0
-RestartSec=10
-[Install]
-WantedBy=kubelet.service
-EOF
-systemctl daemon-reload
-systemctl restart criproxy
-# Configure kubelet.
-mkdir -p /etc/kubernetes/pki && echo "${aws_eks_cluster.cluster.certificate_authority[0].data}" > /etc/kubernetes/pki/ca.crt
-/etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' --kubelet-extra-args '--container-runtime=remote --container-runtime-endpoint=/run/criproxy.sock --max-pods=1000 --node-labels=elotl.co/milpa-worker=' --use-max-pods false '${var.cluster-name}'
-sed -i '/docker/d' /etc/systemd/system/kubelet.service
-# Override number of CPUs and memory cadvisor reports.
-infodir=/opt/kiyot/proc
-mkdir -p $infodir; rm -f $infodir/{cpu,mem}info
-for i in $(seq 0 1023); do
-    cat << EOF >> $infodir/cpuinfo
-processor	: $i
-physical id	: 0
-core id		: 0
-cpu MHz		: 2400.068
-EOF
-done
-mem=$((4096*1024*1024))
-cat << EOF > $infodir/meminfo
-$(printf "MemTotal:%15d kB" $mem)
-SwapTotal:             0 kB
-EOF
-cat <<EOF > /etc/systemd/system/kiyot-override-proc.service
-[Unit]
-Description=Override /proc info files
-Before=kubelet.service
-[Service]
-Type=oneshot
-ExecStart=/bin/mount --bind $infodir/cpuinfo /proc/cpuinfo
-ExecStart=/bin/mount --bind $infodir/meminfo /proc/meminfo
-RemainAfterExit=true
-ExecStop=/bin/umount /proc/cpuinfo
-ExecStop=/bin/umount /proc/meminfo
-StandardOutput=journal
-EOF
-systemctl daemon-reload
-systemctl start kiyot-override-proc
-systemctl restart kubelet
 USERDATA
 }
 
@@ -291,11 +199,11 @@ USERDATA
 resource "aws_launch_configuration" "milpa-worker" {
   associate_public_ip_address = true
   iam_instance_profile = aws_iam_instance_profile.worker-node.name
-  image_id = data.aws_ami.eks-worker.id
+  image_id = data.aws_ami.eks-milpa-worker.id
   instance_type = "t3.small"
   name_prefix = "${var.cluster-name}-eks-milpa-launch-configuration"
   security_groups = [aws_security_group.worker-node.id]
-  user_data_base64 = base64encode(local.milpa-worker-userdata)
+  user_data_base64 = base64encode(local.worker-userdata)
   key_name = var.ssh-key-name
 
   lifecycle {
