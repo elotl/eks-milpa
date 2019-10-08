@@ -11,7 +11,7 @@ fi
 export service_cidr="$service_cidr"
 
 # Get k8s version.
-export k8s_version=$(kubectl version --short | grep -i "Server" | sed -r 's/^Server Version: (v[0-9]+\.[0-9]+\.[0-9]+).*$/\1/g')
+export k8s_version=$(kubectl version --short | grep -i "Server" | sed -E 's/^Server Version: (v[0-9]+\.[0-9]+\.[0-9]+).*$/\1/g')
 
 # Export userdata template substitution variables.
 export node_nametag="${node_nametag}"
