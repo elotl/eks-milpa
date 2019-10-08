@@ -28,6 +28,7 @@ export license_password="${license_password}"
 export itzo_url="${itzo_url}"
 export itzo_version="${itzo_version}"
 export milpa_image="${milpa_image}"
+export pod_cidr="${pod_cidr:-255.255.255.255/32}"
 
 # Enable masquerade-all in kube-proxy.
 kubectl -n kube-system get cm kube-proxy-config -oyaml | sed 's/\(^\s*masqueradeAll:\).*$/\1 true/' | kubectl replace -f -
