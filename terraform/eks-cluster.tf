@@ -137,7 +137,7 @@ resource "null_resource" "update-config" {
 
   # Wait for the API endpoint to come up.
   provisioner "local-exec" {
-    command = "timeout 300s sh -c 'while true; do kubectl get pods > /dev/null 2>&1 && break; sleep 1; done'"
+    command = "sh -c 'i=0; while [ $i -lt 300 ]; do kubectl get pods > /dev/null 2>&1 && exit 0; sleep 1; done; exit 1'"
     environment = {
       KUBECONFIG = "kubeconfig"
     }
