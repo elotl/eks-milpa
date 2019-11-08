@@ -340,10 +340,12 @@ resource "aws_autoscaling_group" "milpa-workers" {
 }
 
 resource "aws_autoscaling_group" "workers" {
-  desired_capacity = 1
   launch_configuration = aws_launch_configuration.worker.id
-  max_size = 1
-  min_size = 1
+  # By default, this ASG is set to not launch any instances, since nodeless workers
+  # can handle any type of workload.
+  desired_capacity = 0
+  max_size = 0
+  min_size = 0
   name = "${var.cluster-name}-workers"
   vpc_zone_identifier = aws_subnet.subnets.*.id
 
