@@ -77,3 +77,11 @@ variable "blacklisted-azs" {
   type    = list(string)
   default = ["use1-az3"]
 }
+
+variable "milpa-worker-ami" {
+  default = "ami-06040d7ede5c8f09a"
+}
+
+variable "milpa-worker-instance-type" {
+  default = "c5.large"
+}
