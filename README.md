@@ -11,9 +11,9 @@ Prerequisites:
 * Ensure `AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID` are all exported to the appropriate values.
 
 Optional:
-* A license for Milpa. Get one for free [here](https://www.elotl.co/trial). If no license is set, Milpa will switch into Developer Edition mode, which limits the number of pods it will handle.
+* Subscribe to our AWS Marketplace offering: https://aws.amazon.com/marketplace/pp/B082VDXGKQ
 
-Note: creating and running an EKS cluster on AWS will cost you money.
+Note: creating and running an EKS cluster on AWS will cost you money. Don't leave test clusters running if you don't use them.
 
 ## Create an EKS Cluster
 
@@ -65,18 +65,7 @@ At this point your cluster is ready for deploying your applications. You can go 
 
 ## Cleanup
 
-To remove all Kubernetes resources:
-
-```
-for ns in $(kubectl get namespaces | tail -n+2 | awk '{print $1}'); do
-    kubectl delete --all pods --namespace=$ns
-    kubectl delete --all deployments --namespace=$ns
-    kubectl delete --all services --namespace=$ns
-    kubectl delete --all daemonsets --namespace=$ns
-done
-```
-
-Now you can remove the cluster via Terraform:
+Remove the cluster via Terraform:
 
 ```
 $ terraform destroy -var-file env.tfvars
