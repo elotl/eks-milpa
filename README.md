@@ -11,7 +11,7 @@ Prerequisites:
 * Ensure `AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION, AWS_ACCESS_KEY_ID` are all exported to the appropriate values.
 
 Optional:
-* Subscribe to our AWS Marketplace offering: https://aws.amazon.com/marketplace/pp/B082VDXGKQ
+* Subscribe to our AWS Marketplace offering: https://aws.amazon.com/marketplace/pp/B082VDXGKQ and change the worker AMI to the Marketplace offering in your tfvars override file (see below). By default, Milpa will be running in developer edition mode, with a 50 pod per worker limit.
 
 Note: creating and running an EKS cluster on AWS will cost you money. Don't leave test clusters running if you don't use them.
 
