@@ -79,10 +79,12 @@ variable "blacklisted-azs" {
 }
 
 variable "milpa-worker-ami" {
-  // To be able to use this AMI, you first need to subscribe to the following
-  // AWS Marketplace offering: https://aws.amazon.com/marketplace/pp/B082VDXGKQ
-  // Note: this is a paid product.
-  default = "ami-06040d7ede5c8f09a"
+  // This is the free worker AMI that has a limit of 50 Milpa pods.
+  default = "ami-004afba2ba154f8e1"
+  // To be able to use the paid AMI, you first need to subscribe to the
+  // following AWS Marketplace offering:
+  // https://aws.amazon.com/marketplace/pp/B082VDXGKQ
+  // default = "ami-06040d7ede5c8f09a"
 }
 
 variable "milpa-worker-instance-type" {
