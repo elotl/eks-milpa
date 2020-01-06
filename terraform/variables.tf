@@ -79,6 +79,9 @@ variable "blacklisted-azs" {
 }
 
 variable "milpa-worker-ami" {
+  // To be able to use this AMI, you first need to subscribe to the following
+  // AWS Marketplace offering: https://aws.amazon.com/marketplace/pp/B082VDXGKQ
+  // Note: this is a paid product.
   default = "ami-06040d7ede5c8f09a"
 }
 
