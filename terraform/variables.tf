@@ -85,3 +85,7 @@ variable "milpa-worker-ami" {
 variable "milpa-worker-instance-type" {
   default = "c5.large"
 }
+
+variable "vpc-cidr" {
+  default = "10.0.0.0/16"
+}
