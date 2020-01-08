@@ -70,7 +70,7 @@ resource "aws_security_group" "clustersg" {
     from_port         = 443
     to_port           = 443
     protocol          = "tcp"
-    cidr_blocks       = ["0.0.0.0/0"]
+    cidr_blocks       = [local.client-cidr, aws_vpc.vpc.cidr_block]
     description       = "Allow access to the cluster API Server"
   }
 
@@ -122,6 +122,7 @@ users:
         - "-i"
         - "${var.cluster-name}"
 KUBECONFIG
+service-cidr = substr(aws_vpc.vpc.cidr_block, 0, 3) != "10." ? "10.100.0.0/16" : "172.20.0.0/16"
 }
 
 resource "null_resource" "update-config" {
@@ -148,6 +149,7 @@ resource "null_resource" "update-config" {
     environment = {
       KUBECONFIG = "kubeconfig"
       vpc_cidr = aws_vpc.vpc.cidr_block
+      service_cidr = local.service-cidr
       node_nametag = var.cluster-name
       aws_access_key_id = var.aws-access-key-id
       aws_secret_access_key = var.aws-secret-access-key

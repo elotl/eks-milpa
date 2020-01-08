@@ -2,14 +2,6 @@
 
 set -eu
 
-# Check what service IP CIDR is in use.
-service_cidr="10.100.0.0/16"
-ten_range=$(echo ${vpc_cidr} | grep -c '^10\..*' || true )
-if [[ "$ten_range" != "0" ]] ; then
-    service_cidr="172.20.0.0/16"
-fi
-export service_cidr="$service_cidr"
-
 # Get k8s version.
 export k8s_version=$(kubectl version --short | grep -i "Server" | sed -E 's/^Server Version: (v[0-9]+\.[0-9]+\.[0-9]+).*$/\1/g')
 
@@ -29,6 +21,7 @@ export itzo_url="${itzo_url}"
 export itzo_version="${itzo_version}"
 export milpa_image="${milpa_image}"
 export pod_cidr="${pod_cidr:-255.255.255.255/32}"
+export service_cidr="${service_cidr}"
 
 # Set server-url for kiyot.
 export server_url="$(kubectl config view -ojsonpath='{.clusters[0].cluster.server}')"
