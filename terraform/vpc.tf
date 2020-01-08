@@ -21,6 +21,9 @@ resource "aws_vpc" "vpc" {
     when        = destroy
     command     = "./cleanup-vpc.sh ${self.id} ${var.cluster-name}"
     interpreter = ["/bin/bash", "-c"]
+    environment = {
+      TF_AWS_REGION = "${data.aws_region.current.name}"
+    }
   }
 }
 
@@ -50,6 +53,9 @@ resource "aws_internet_gateway" "igw" {
     when        = destroy
     command     = "./cleanup-vpc.sh ${self.vpc_id} ${var.cluster-name}"
     interpreter = ["/bin/bash", "-c"]
+    environment = {
+      TF_AWS_REGION = "${data.aws_region.current.name}"
+    }
   }
 }
 

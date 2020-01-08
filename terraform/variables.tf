@@ -62,11 +62,6 @@ variable "license-password" {
   default = ""
 }
 
-variable "region" {
-  // Currently Milpa only supports us-east-1.
-  default = "us-east-1"
-}
-
 variable "milpa-image" {
   default = "elotl/milpa"
 }

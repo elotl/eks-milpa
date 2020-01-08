@@ -44,6 +44,13 @@ fi
 check_prg aws
 check_prg jq
 
+if [[ -z "$AWS_REGION" ]]; then
+    export AWS_REGION=$TF_AWS_REGION
+fi
+if [[ -z "$AWS_DEFAULT_REGION" ]]; then
+    export AWS_DEFAULT_REGION=$AWS_REGION
+fi
+
 # Delete instances in VPC. Do this in a loop, since Milpa might be still
 # creating new instances.
 while true; do
