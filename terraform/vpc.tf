@@ -10,11 +10,6 @@ resource "aws_vpc" "vpc" {
   cidr_block = "10.0.0.0/16"
   enable_dns_hostnames = "true"
 
-  tags = {
-    "Name"                                      = "eks-${var.cluster-name}"
-    "kubernetes.io/cluster/${var.cluster-name}" = "shared"
-  }
-
   provisioner "local-exec" {
     # Remove any leftover instance, security group etc Milpa created. They
     # would prevent terraform from destroying the VPC.
@@ -42,10 +37,6 @@ resource "aws_subnet" "subnets" {
 
 resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.vpc.id
-
-  tags = {
-    Name = "eks-${var.cluster-name}"
-  }
 
   provisioner "local-exec" {
     # Remove any leftover instance, security group etc Milpa created. They
