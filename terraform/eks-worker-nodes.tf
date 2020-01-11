@@ -159,10 +159,10 @@ resource "aws_security_group" "worker-node" {
     cidr_blocks = [local.client-cidr]
   }
 
-  tags = {
+  tags = merge(var.extra-tags, {
     "Name" = "eks-worker-node-${var.cluster-name}"
     "kubernetes.io/cluster/${var.cluster-name}" = "owned"
-  }
+  })
 }
 
 # Userdata for workers.
@@ -172,6 +172,7 @@ locals {
 set -o xtrace
 /etc/eks/bootstrap.sh --apiserver-endpoint '${aws_eks_cluster.cluster.endpoint}' --b64-cluster-ca '${aws_eks_cluster.cluster.certificate_authority[0].data}' '${var.cluster-name}'
 USERDATA
+  milpa-worker-tags = [for k, v in var.extra-tags: {"key": k, "value": v, "propagate_at_launch": true}]
 }
 
 resource "aws_launch_configuration" "milpa-worker" {
@@ -197,15 +198,16 @@ resource "aws_autoscaling_group" "milpa-workers" {
   name = "${var.cluster-name}-milpa-workers"
   vpc_zone_identifier = aws_subnet.subnets.*.id
 
-  tag {
+  tags = concat(local.milpa-worker-tags, [
+    {
     key = "Name"
     value = "eks-${var.cluster-name}-milpa-worker"
     propagate_at_launch = true
-  }
-
-  tag {
+    },
+    {
     key = "kubernetes.io/cluster/${var.cluster-name}"
     value = "owned"
     propagate_at_launch = true
-  }
+    }
+  ])
 }

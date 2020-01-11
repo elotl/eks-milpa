@@ -74,9 +74,9 @@ resource "aws_security_group" "clustersg" {
     description       = "Allow access to the cluster API Server"
   }
 
-  tags = {
+  tags = merge(var.extra-tags, {
     Name = "eks-${var.cluster-name}"
-  }
+  })
 }
 
 resource "aws_eks_cluster" "cluster" {

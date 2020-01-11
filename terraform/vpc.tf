@@ -29,10 +29,10 @@ resource "aws_subnet" "subnets" {
   cidr_block        = "10.0.${count.index}.0/24"
   vpc_id            = aws_vpc.vpc.id
 
-  tags = {
-    "Name"                                      = "eks-${var.cluster-name}"
+  tags = merge(var.extra-tags, {
+    "Name" = "eks-worker-node-${var.cluster-name}"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
-  }
+  })
 }
 
 resource "aws_internet_gateway" "igw" {
