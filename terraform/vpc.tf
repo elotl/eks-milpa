@@ -20,6 +20,16 @@ resource "aws_vpc" "vpc" {
       TF_AWS_REGION = "${data.aws_region.current.name}"
     }
   }
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
+
+  tags = merge(var.extra-tags, {
+    "Name" = "eks-${var.cluster-name}"
+    "random" = "randomtag"
+    "kubernetes.io/cluster/${var.cluster-name}" = "shared"
+  })
 }
 
 resource "aws_subnet" "subnets" {
@@ -29,8 +39,12 @@ resource "aws_subnet" "subnets" {
   cidr_block        = "10.0.${count.index}.0/24"
   vpc_id            = aws_vpc.vpc.id
 
+  lifecycle {
+    ignore_changes = [tags]
+  }
+
   tags = merge(var.extra-tags, {
-    "Name" = "eks-worker-node-${var.cluster-name}"
+    "Name" = "eks-${var.cluster-name}-${count.index}"
     "kubernetes.io/cluster/${var.cluster-name}" = "shared"
   })
 }
@@ -48,6 +62,14 @@ resource "aws_internet_gateway" "igw" {
       TF_AWS_REGION = "${data.aws_region.current.name}"
     }
   }
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
+
+  tags = merge(var.extra-tags, {
+    "Name" = "eks-${var.cluster-name}"
+  })
 }
 
 resource "aws_route_table" "rt" {
@@ -59,8 +81,12 @@ resource "aws_route_table" "rt" {
   }
 
   lifecycle {
-    ignore_changes = [route]
+    ignore_changes = [route, tags]
   }
+
+  tags = merge(var.extra-tags, {
+    "Name" = "eks-${var.cluster-name}"
+  })
 }
 
 resource "aws_route_table_association" "rtassocs" {

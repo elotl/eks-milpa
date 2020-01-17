@@ -159,8 +159,12 @@ resource "aws_security_group" "worker-node" {
     cidr_blocks = [local.client-cidr]
   }
 
+  lifecycle {
+    ignore_changes = [tags]
+  }
+
   tags = merge(var.extra-tags, {
-    "Name" = "eks-worker-node-${var.cluster-name}"
+    "Name" = "eks-${var.cluster-name}-worker-node"
     "kubernetes.io/cluster/${var.cluster-name}" = "owned"
   })
 }
@@ -198,10 +202,14 @@ resource "aws_autoscaling_group" "milpa-workers" {
   name = "${var.cluster-name}-milpa-workers"
   vpc_zone_identifier = aws_subnet.subnets.*.id
 
+  lifecycle {
+    ignore_changes = [tags]
+  }
+
   tags = concat(local.milpa-worker-tags, [
     {
     key = "Name"
-    value = "eks-${var.cluster-name}-milpa-worker"
+    value = "eks-${var.cluster-name}-milpa-workers"
     propagate_at_launch = true
     },
     {

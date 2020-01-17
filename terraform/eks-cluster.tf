@@ -74,6 +74,10 @@ resource "aws_security_group" "clustersg" {
     description       = "Allow access to the cluster API Server"
   }
 
+  lifecycle {
+    ignore_changes = [tags]
+  }
+
   tags = merge(var.extra-tags, {
     Name = "eks-${var.cluster-name}"
   })
