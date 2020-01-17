@@ -79,6 +79,17 @@ resource "aws_security_group" "clustersg" {
   })
 }
 
+resource "null_resource" "check-dependencies" {
+  provisioner "local-exec" {
+    command = <<EOS
+      for d in aws aws-iam-authenticator kubectl; do
+          echo Checking if $d is available
+          which $d > /dev/null 2>&1
+      done
+EOS
+  }
+}
+
 resource "aws_eks_cluster" "cluster" {
   name     = var.cluster-name
   role_arn = aws_iam_role.eks-role.arn
@@ -92,6 +103,7 @@ resource "aws_eks_cluster" "cluster" {
   depends_on = [
     aws_iam_role_policy_attachment.cluster-AmazonEKSClusterPolicy,
     aws_iam_role_policy_attachment.cluster-AmazonEKSServicePolicy,
+    null_resource.check-dependencies,
   ]
 }
 
